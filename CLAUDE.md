@@ -210,7 +210,7 @@ These rules are load-bearing. They override convenience, speed, and any implicit
 
 ### Branching & CI
 
-- `prod` (production) ← `dev` ← `feat/*` — _default; confirm with USER before creating the branches_
+- `prod` (production) ← `dev` ← `feat/*` — created 2026-09-25; `prod` is the GitHub default branch, day-to-day work branches off `dev`
 - Preview/staging deploys on PRs where the platform supports it (web report)
 - CI: lint (ruff / eslint) → typecheck (TS strict) → build → test (pytest with fixtures, one test per `DetailType`) → SQL tests (validation V1–V3 on a disposable DB) → PBIP validation
 - Migration gate: every PR touching `supabase/migrations/` must apply cleanly on a fresh database
