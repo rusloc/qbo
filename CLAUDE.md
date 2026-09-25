@@ -44,13 +44,14 @@ etl/  qbo_sync  (Python 3.12)  ──►  Supabase Postgres
 ```
 .docs/                  → spec, ADR/, ADD/, model/, setup-guide.html
 .log/                   → coms/, daily/, plan/, weekly/, features_and_decisions.md
-etl/  fixtures/  demo_data/   → Python ETL lane
-supabase/               → Supabase CLI project (created by `supabase init`)
-dbt/                    → dbt project `qbo_pnl` (transforms; ADR-0002)
+etl/  fixtures/  demo_data/   → Python ETL (ETL + dbt lane)
+supabase/               → Supabase CLI project (created by `supabase init`; Warehouse lane)
+dbt/                    → dbt project `qbo_pnl` (transforms; ADR-0002; ETL + dbt lane)
 PNL/                    → PBIP report project (created by Desktop)
 web/                    → React report (created by the scaffold tool)
 .claude/skills/         → project skills (agent kit)      .claude/common/ → shared files of the Microsoft skills
 .claude/settings.json   → permission allow / deny lists (agent kit)
+.claude/agents/         → sub-agents, one per lane (ADR-0009)   .claude/agent-memory/ → their memory
 .mcp.json               → project MCP servers (powerbi-modeling)
 _scripts/validate.py    → PBIP / JSON / encoding validator (agent kit)
 scripts/                → setup + sync scripts (sync-pbi-fabric-skills.ps1)
@@ -69,18 +70,19 @@ Where this file / an accepted ADR and the spec disagree, this file and the ADR w
 
 ## Work lanes
 
-Single-agent project for now: the main agent does the work and routes to skills and tools by lane. If sub-agents are introduced later, each lane below becomes one agent (ADR first).
+One sub-agent per lane (ADR-0009, `.claude/agents/`). The main session routes single-lane work to the lane's agent, runs cross-lane work itself and writes `.log/`; delegated agents hand back a summary and write only their own memory. Lanes without an agent stay with the main session. Invoke agents by file name (`@data-engineer-ferry`, `@db-chef`, `@bip`); "ferry" and "chef" are conversation names only.
 
-| Lane | Owns (paths) | Skills | Tools / MCP |
-|------|--------------|--------|-------------|
-| **ETL** (extract + load) | `etl/`, `fixtures/`, `demo_data/` | `python-cli-dev` | Python 3.12, pytest, QBO **sandbox** |
-| **Warehouse** (Supabase SQL + dbt) | `supabase/` (migrations: DDL / init code, validation SQL), `dbt/` (transforms) | `db-schema-architect`, `pg-sql-dev`, `dax-sql-formatter` | Supabase MCP (`supabase`), dbt; `pg-sqldev` MCP once registered |
-| **PBI model & report** | `PNL/`, `.docs/model/` | `pbip-editor`, `semantic-model-authoring`, `powerbi-report-cli`, `dax-sql-formatter` | Power BI Desktop, `powerbi-modeling` MCP, `powerbi-report-author`, `powerbi-desktop`, `_scripts/validate.py` |
-| **PBI Service** (publish, workspace) | workspace items | `powerbi-report-cli` (management mode), `search-consumption-cli` | `fab`, `az` |
-| **Web report** | `web/` | `front-end-web-dev-guru`, `dataviz`, `nextjs-react-code-reviewer`, `qa-testing-engineer` | Node, supabase-js |
+| Lane | Agent | Owns (paths) | Skills | Tools / MCP |
+|------|-------|--------------|--------|-------------|
+| **ETL + dbt** (extract, load, transform) | `data-engineer-ferry` | `etl/`, `fixtures/`, `demo_data/`, `dbt/` (all dbt models and tests) | `data-engineer-py`, `python-cli-dev`, `dax-sql-formatter` | Python 3.12, pytest, dbt, QBO **sandbox** |
+| **Warehouse** (Supabase schema `qbo`) | `db-chef` | `supabase/` (migrations: DDL / init code, roles, grants; validation SQL) | `db-schema-architect`, `pg-sql-dev`, `dax-sql-formatter` | Supabase MCP (`supabase`); `pg-sqldev` MCP once registered |
+| **PBI model & report** | `bip` | `PNL/`, `.docs/model/` | `pbip-editor`, `semantic-model-authoring`, `powerbi-report-cli`, `dax-sql-formatter` | Power BI Desktop, `powerbi-modeling` MCP, `powerbi-report-author`, `powerbi-desktop`, `_scripts/validate.py` |
+| **PBI Service** (publish, workspace) | `bip` | workspace items | `powerbi-report-cli` (management mode), `search-consumption-cli` | `fab`, `az` |
+| **Web report** | — (none yet) | `web/` | `front-end-web-dev-guru`, `dataviz`, `nextjs-react-code-reviewer`, `qa-testing-engineer` | Node, supabase-js |
 
 - Cross-cutting concerns (security, performance, reconciliation) live as checklists inside the lane — not as new lanes.
-- A metric that exists in both PBI and web is owned by the **Warehouse** lane (serve view column) and documented in `.docs/model/`; the two consumers only present it.
+- dbt vs migrations (ADR-0002): a table change a dbt model needs is a migration — ferry proposes it, chef writes the file, the main session applies it after USER approval.
+- A metric that exists in both PBI and web is owned by the **ETL + dbt** lane (the serve-view column, built by dbt) and documented in `.docs/model/`; the two consumers only present it.
 
 ---
 

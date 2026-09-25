@@ -3,7 +3,7 @@
 # F-05 · Warehouse init — migration plan (schema `qbo`)
 
 - **Spec:** §2 (schema), §2.4 (serve layer) · **ADRs:** ADR-0002 (dbt vs migrations), ADR-0003 (schema `qbo`, roles, apply path), ADR-0007 (token vault), ADR-0008 (shared project)
-- **Lane:** Warehouse
+- **Lanes (ADR-0009):** Warehouse — migrations M1–M5 (`db-chef`) · ETL + dbt — the dbt models that fill and serve these tables (`data-engineer-ferry`)
 
 ## Boundary: migrations vs dbt
 

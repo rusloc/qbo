@@ -18,3 +18,4 @@
 | OAuth token vault | Supabase Vault secret `qbo_refresh_token` behind two `security definer` functions (USER: Vault is primary; another store is acceptable if Vault falls short) | decided | ADR-0007 |
 | Tests | pytest (+ fixtures per `DetailType`), SQL validation V1–V3; web: Vitest | fixed (web: proposed) | spec §3.1, §5, §8 |
 | AI tooling | Claude Code + pbi-fabric-agent-kit 2026-09-25 (skills, `powerbi-modeling` MCP, report CLIs) | decided | USER 2026-09-25 |
+| AI sub-agents | one per lane: `data-engineer-ferry` (ETL + all dbt), `db-chef` (schema `qbo` migrations), `bip` (PBI model, report, Service); web report: none yet | decided | ADR-0009 |

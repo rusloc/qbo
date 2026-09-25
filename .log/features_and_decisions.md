@@ -14,6 +14,8 @@
 - 2026-09-25 #decision Schema `qbo` holds every QBO object — ADR-0003 (accepted: schema; roles `qbo_etl` / `qbo_reader`; no Data API exposure; migrations applied via MCP `apply_migration` with USER approval and verified on `vosk.dev`)
 - 2026-09-25 #decision Refresh token in Supabase Vault (primary; another store acceptable if Vault falls short) — ADR-0007 (accepted)
 - 2026-09-25 #decision Git commit messages never reference Anthropic, Claude or Claude Code (CLAUDE.md, USER)
+- 2026-09-25 #decision Sub-agents: `bip` = PBI model & report + PBI Service; `db-chef` = schema `qbo` (`supabase/` migrations, validation SQL); dbt ownership decided when the data-engineer agent lands; no web report agent for now. Delegated agents don't write `.log/` (main session logs); chef's memory candidates use `SCAND-NNN` (project keeps `CAND-NNN` / `AP-NNN`) — roster ADR pending (ADR-0009)
+- 2026-09-25 #decision `data-engineer-ferry` joins as the ETL + dbt agent and owns all dbt work (`dbt/`: `stg_*` / `vw_*` models, fills of migration-owned `dim_*` / `fact_*`, dbt tests) plus `etl/`, `fixtures/`, `demo_data/`; `db-chef` keeps the migrations; shared PBI / web metrics (serve-view columns) move to the ETL + dbt lane — ADR-0009 (accepted)
 
 ### Open ADR candidates
 - ADR-0004 — where and how `qbo_sync cdc` runs daily
