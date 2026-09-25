@@ -7,7 +7,7 @@
 
 - **Project name**: QBO P&L
 - **One-line purpose**: Productized, reusable Profit & Loss analytics for SME clients — QuickBooks Online (QBO) ledger → owned Python ETL → Supabase Postgres warehouse → Power BI template **and** a React online report.
-- **Canonical domain / workspace**: _not assigned yet_ — Supabase project ref and Power BI / Fabric workspace are filled in on first provisioning.
+- **Canonical domain / workspace**: Supabase project **`vosk.dev`** hosts the warehouse (USER 2026-09-25; project ref not recorded here — it lives in env / local config). The project is shared with the USER's other backends; QBO lives in its own schema (ADR-0008). Power BI / Fabric workspace: _not assigned yet_.
 - **Public surface/URL**: _not assigned yet_ — URL of the React online report.
 - **Repository**: GitHub `rusloc/qbo` — remote `origin` = `git@github.com:rusloc/qbo.git` (SSH)
 - **Runtime hook**: env vars (`DB_URL`, `SUPABASE_URL`, `REALM_ID`, `ENV`) and the Power BI parameters `Server`, `Database`, `FY_START` are the canonical source of truth at runtime; do NOT hard-code a project ref, host, realmId or workspace in code. Values written above are for docs/copy only.
@@ -46,6 +46,7 @@ etl/  qbo_sync  (Python 3.12)  ──►  Supabase Postgres
 .log/                   → coms/, daily/, plan/, weekly/, features_and_decisions.md
 etl/  fixtures/  demo_data/   → Python ETL lane
 supabase/               → Supabase CLI project (created by `supabase init`)
+dbt/                    → dbt project `qbo_pnl` (transforms; ADR-0002)
 PNL/                    → PBIP report project (created by Desktop)
 web/                    → React report (created by the scaffold tool)
 .claude/skills/         → project skills (agent kit)      .claude/common/ → shared files of the Microsoft skills
@@ -73,7 +74,7 @@ Single-agent project for now: the main agent does the work and routes to skills 
 | Lane | Owns (paths) | Skills | Tools / MCP |
 |------|--------------|--------|-------------|
 | **ETL** (extract + load) | `etl/`, `fixtures/`, `demo_data/` | `python-cli-dev` | Python 3.12, pytest, QBO **sandbox** |
-| **Warehouse** (Supabase SQL) | `supabase/` (migrations: DDL, transforms, validation SQL) | `db-schema-architect`, `pg-sql-dev`, `dax-sql-formatter` | Supabase CLI; `pg-sqldev` MCP once registered |
+| **Warehouse** (Supabase SQL + dbt) | `supabase/` (migrations: DDL / init code, validation SQL), `dbt/` (transforms) | `db-schema-architect`, `pg-sql-dev`, `dax-sql-formatter` | Supabase MCP (`supabase`), dbt; `pg-sqldev` MCP once registered |
 | **PBI model & report** | `PNL/`, `.docs/model/` | `pbip-editor`, `semantic-model-authoring`, `powerbi-report-cli`, `dax-sql-formatter` | Power BI Desktop, `powerbi-modeling` MCP, `powerbi-report-author`, `powerbi-desktop`, `_scripts/validate.py` |
 | **PBI Service** (publish, workspace) | workspace items | `powerbi-report-cli` (management mode), `search-consumption-cli` | `fab`, `az` |
 | **Web report** | `web/` | `front-end-web-dev-guru`, `dataviz`, `nextjs-react-code-reviewer`, `qa-testing-engineer` | Node, supabase-js |
@@ -108,6 +109,7 @@ These rules are load-bearing. They override convenience, speed, and any implicit
 
 ### Prohibited (never do, even if it seems helpful)
 - **Never execute git commands or touch the working tree state** — output git commands as a single fenced bash block, ready to copy-paste; nothing more
+- **Never reference Anthropic, Claude or Claude Code in git commit messages** — no `Co-Authored-By` trailer, no "Generated with" line, no mention in subject or body (USER 2026-09-25)
 - **Never flip a daily file to `DAY CLOSED`** without an explicit close-day directive from the USER (see Day-close gate below)
 - Never hard-code a Supabase project ref, DB host, QBO realmId or PBI workspace in code — use env vars / PBI parameters
 - Never commit, print, or log secrets, API keys, OAuth tokens or connection strings; never move them out of `.env` / vaults. Never read `.env*` files (denied in `.claude/settings.json` on purpose)
@@ -220,7 +222,7 @@ These rules are load-bearing. They override convenience, speed, and any implicit
   git switch dev
 ```
 - Preview deploys from `dev`, production deploys from `prod`, where the platform supports it (web report)
-- CI: lint (ruff / eslint) → typecheck (TS strict) → build → test (pytest with fixtures, one test per `DetailType`) → SQL tests (validation V1–V3 on a disposable DB) → PBIP validation
+- CI: lint (ruff / eslint) → typecheck (TS strict) → build → test (pytest for the ETL; `dbt build` with one test per `DetailType` on fixtures) → SQL tests (validation V1–V3 on a disposable DB) → PBIP validation
 - Migration gate: every PR touching `supabase/migrations/` must apply cleanly on a fresh database
 
 ### Testing policy
@@ -235,14 +237,15 @@ en-US, USD — UI + content locked together at MVP. Single currency by design (m
 
 ## Data platform conventions (ETL + Supabase)
 
-**Stack:** Python 3.12 · QBO Accounting API v3 (`minorversion=75`) · Supabase Postgres · Supabase CLI migrations · transforms in plain SQL or dbt-core (open — ADR-0002) · pytest
+**Stack:** Python 3.12 · QBO Accounting API v3 (`minorversion=75`) · Supabase Postgres · Supabase CLI migrations · transforms in dbt-core + dbt-postgres, DDL / init code in migrations (ADR-0002) · pytest
 
 **Structure:**
 ```
 etl/          → qbo_sync CLI (auth · backfill · cdc · status), generate_synthetic.py, seed_sandbox.py, tests/
 fixtures/     → scrubbed sandbox JSON, one file per entity and per Line DetailType
 demo_data/    → synthetic CSVs (24 months, deterministic seed) + loader
-supabase/     → created by `supabase init`; migrations/ hold ALL DDL (raw → stg → mart → serve, qa)
+supabase/     → created by `supabase init`; migrations/ hold ALL DDL / init code (schema `qbo`, roles, grants, tables, functions)
+dbt/          → dbt project `qbo_pnl`: builds stg_* / vw_* views, fills the migration-owned dim_* / fact_* (ADR-0002)
 ```
 
 **Key rules:**
@@ -259,11 +262,11 @@ supabase/     → created by `supabase init`; migrations/ hold ALL DDL (raw → 
 - Prefer warehouse SQL over Power Query or React code for any transform logic (spec §9.6)
 
 **Database conventions:**
-- **Tenancy:** one client (QBO realm) per deployment — one Supabase project per client. Multi-entity consolidation is a non-goal
+- **Tenancy (amended USER 2026-09-25 — ADR-0008):** the Supabase project `vosk.dev` is **shared** — it is the USER's personal web-app backend and hosts other schemas that will grow. The rule "one Supabase project per client" is dropped. QBO lives in its **own schema, `qbo`** (ADR-0003); objects without a schema (roles, pg_cron jobs) take a `qbo_` prefix. Never create, alter, grant on or drop anything outside the QBO namespace; project-wide settings (Data API exposed schemas, extensions, auth, network) are shared → ask first. One QBO realm per deployment; multi-entity consolidation is a non-goal
 - **Keys:** integer `identity` surrogate keys as spec §2 defines them. The web-app "UUID PKs" rule does not apply to warehouse tables — they are internal and never used in URLs
 - **Money:** `numeric(15,2)`; never `float` / `real` / `double precision`
 - **Soft-delete:** facts carry `is_voided` / `is_deleted` flags (spec); raw zone is append-only
-- **Exposure (proposed — ADR-0003):** only the serve layer is reachable from the Data API; views exposed to the web run with `security_invoker = true` so RLS applies; separate DB roles for ETL writes and Power BI reads
+- **Exposure + roles (ADR-0003, proposed):** schema `qbo` is not exposed through the Data API, and nothing is granted to `anon` / `authenticated`. ETL + dbt write as `qbo_etl` (no DDL rights on tables); Power BI reads `vw_*` only, as `qbo_reader`. The web report's API path (exposed schema with `security_invoker` views, or RPC) is decided with ADR-0005
 - **Connections:** Windows clients (Power BI, local Python) connect through the Supabase **session pooler** (IPv4); the direct host is IPv6-only without the IPv4 add-on. SSL required
 
 ---
