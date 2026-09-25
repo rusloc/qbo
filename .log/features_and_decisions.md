@@ -13,6 +13,7 @@
 - 2026-09-25 #decision dbt-core + dbt-postgres for all transformations; DDL / init code stays in migrations — ADR-0002 (accepted)
 - 2026-09-25 #decision Schema `qbo` holds every QBO object — ADR-0003 (accepted: schema; roles `qbo_etl` / `qbo_reader`; no Data API exposure; migrations applied via MCP `apply_migration` with USER approval and verified on `vosk.dev`)
 - 2026-09-25 #decision Refresh token in Supabase Vault (primary; another store acceptable if Vault falls short) — ADR-0007 (accepted)
+- 2026-09-25 #decision Git commit messages never reference Anthropic, Claude or Claude Code (CLAUDE.md, USER)
 
 ### Open ADR candidates
 - ADR-0004 — where and how `qbo_sync cdc` runs daily
