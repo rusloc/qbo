@@ -42,3 +42,9 @@ supabase/.branches/
 # Agent kit source: the installed copy lives in .claude/, scripts/, _scripts/, _mcp/
 pbi-fabric-agent-kit/
 pbi-fabric-agent-kit-*.zip
+
+# dbt (ADR-0002)
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml

@@ -11,15 +11,13 @@
 - 2026-09-25 #decision AI tooling = pbi-fabric-agent-kit 2026-09-25 (skills, `powerbi-modeling` MCP, report CLIs)
 - 2026-09-25 #decision Supabase project `vosk.dev` is shared with the USER's other backends; QBO lives in its own schema; rule "one Supabase project per client" dropped — ADR-0008 (accepted)
 - 2026-09-25 #decision dbt-core + dbt-postgres for all transformations; DDL / init code stays in migrations — ADR-0002 (accepted)
-- 2026-09-25 #decision Schema `qbo` holds every QBO object — ADR-0003 (schema accepted; roles, exposure, migration apply path proposed)
-- 2026-09-25 #decision Refresh token stored in Supabase (USER); proposed as Vault, not Edge Function env vars — ADR-0007 (proposed)
+- 2026-09-25 #decision Schema `qbo` holds every QBO object — ADR-0003 (accepted: schema; roles `qbo_etl` / `qbo_reader`; no Data API exposure; migrations applied via MCP `apply_migration` with USER approval and verified on `vosk.dev`)
+- 2026-09-25 #decision Refresh token in Supabase Vault (primary; another store acceptable if Vault falls short) — ADR-0007 (accepted)
 
 ### Open ADR candidates
-- ADR-0003 — proposed parts: roles `qbo_etl` / `qbo_reader`, no Data API exposure, migration apply path via MCP `apply_migration`
 - ADR-0004 — where and how `qbo_sync cdc` runs daily
 - ADR-0005 — React report: plotting library, build tool, hosting
 - ADR-0006 — Power BI Service: refresh path (cloud connection vs gateway) and deploy tool
-- ADR-0007 — refresh token in Supabase Vault (proposed; confirm interpretation of "Supabase env vars")
 
 ### Features
 | ID | Feature | Spec | State |

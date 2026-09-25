@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: qbo
+    schema: qbo
+    description: QBO raw zone, created by migration M2 (F-05); written by qbo_sync, insert-only.
+    tables:
+      - name: raw_entity
+        description: One row per entity version landed from the QBO API (spec §2.1).

@@ -1,0 +1,16 @@
+# dbt connection profile. No secrets in this file: every value comes from env vars.
+# Connect as qbo_etl through the Supabase session pooler (IPv4), SSL required.
+# DBT_ENV_SECRET_* values are scrubbed from dbt logs.
+qbo_pnl:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('QBO_DB_HOST') }}"                         # session pooler host
+      port: "{{ env_var('QBO_DB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('QBO_DB_USER') }}"                         # qbo_etl.<project-ref>
+      password: "{{ env_var('DBT_ENV_SECRET_QBO_DB_PASSWORD') }}"
+      dbname: "{{ env_var('QBO_DB_NAME', 'postgres') }}"
+      schema: qbo
+      sslmode: require
+      threads: 4

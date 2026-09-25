@@ -130,7 +130,7 @@ These rules are load-bearing. They override convenience, speed, and any implicit
 - Schema/data-model changes beyond the explicitly requested scope (spec §2 is the contract)
 - Introducing a new dependency, service, or MCP
 - Anything touching auth, OAuth tokens, billing, permissions, or user data handling
-- **Any write to a remote system**: applying migrations to the remote Supabase project (`supabase db push`), DML on remote tables, POSTs to the QBO sandbox (`seed_sandbox.py`), publishing / refreshing in the Power BI Service
+- **Any write to a remote system**: applying migrations to the remote Supabase project (Supabase MCP `apply_migration`), DML on remote tables, POSTs to the QBO sandbox (`seed_sandbox.py`), publishing / refreshing in the Power BI Service
 - When multiple interpretations of a request exist — present them, don't pick silently
 - When day-close intent is ambiguous → ask: "Close the day, or keep it open?"
 
@@ -257,7 +257,7 @@ dbt/          → dbt project `qbo_pnl`: builds stg_* / vw_* views, fills the mi
 - Transforms are deterministic and re-runnable: full-refresh safe + incremental upsert path; running twice yields identical row counts (gate P2)
 - Line explosion (spec §3.1) and sign normalization (spec §3.2) are the correctness core: one unit test per `DetailType`, built on `fixtures/`
 - Voided → `is_voided`; deleted (CDC only) → `is_deleted`; `vw_fact_gl` filters both out
-- Every schema change is a migration (`supabase migration new <name>`); no ad-hoc DDL on the remote project
+- Every schema change is a migration file `supabase/migrations/<yyyymmddhhmmss>_qbo_<name>.sql`, applied to `vosk.dev` with Supabase MCP `apply_migration` after USER approval (ADR-0003; an `ask` rule in `.claude/settings.json` enforces the prompt). Never `supabase db push` on `vosk.dev`; no ad-hoc DDL on the remote project. Supabase MCP `execute_sql` runs read-only statements only
 - Validation (spec §5): V1 reconciliation vs Reports API per month × `stmt_section`, tolerance $0.01, fail loudly; V2 unmapped accounts; V3 orphans / dead letters
 - Prefer warehouse SQL over Power Query or React code for any transform logic (spec §9.6)
 
@@ -266,7 +266,7 @@ dbt/          → dbt project `qbo_pnl`: builds stg_* / vw_* views, fills the mi
 - **Keys:** integer `identity` surrogate keys as spec §2 defines them. The web-app "UUID PKs" rule does not apply to warehouse tables — they are internal and never used in URLs
 - **Money:** `numeric(15,2)`; never `float` / `real` / `double precision`
 - **Soft-delete:** facts carry `is_voided` / `is_deleted` flags (spec); raw zone is append-only
-- **Exposure + roles (ADR-0003, proposed):** schema `qbo` is not exposed through the Data API, and nothing is granted to `anon` / `authenticated`. ETL + dbt write as `qbo_etl` (no DDL rights on tables); Power BI reads `vw_*` only, as `qbo_reader`. The web report's API path (exposed schema with `security_invoker` views, or RPC) is decided with ADR-0005
+- **Exposure + roles (ADR-0003):** schema `qbo` is not exposed through the Data API, and nothing is granted to `anon` / `authenticated`. ETL + dbt write as `qbo_etl` (no DDL rights on tables); Power BI reads `vw_*` only, as `qbo_reader`. The web report's API path (exposed schema with `security_invoker` views, or RPC) is decided with ADR-0005
 - **Connections:** Windows clients (Power BI, local Python) connect through the Supabase **session pooler** (IPv4); the direct host is IPv6-only without the IPv4 add-on. SSL required
 
 ---

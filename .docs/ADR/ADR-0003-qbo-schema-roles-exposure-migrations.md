@@ -1,6 +1,6 @@
 # ADR-0003 — Schema `qbo`, DB roles, Data API exposure, migration apply path
 
-- **Status:** schema `qbo` **Accepted** (USER, 2026-09-25) · roles, exposure and migration apply path **Proposed** (awaiting USER)
+- **Status:** Accepted (USER, 2026-09-25): schema `qbo` first, then roles, exposure and the migration apply path
 - **Related:** ADR-0001 (warehouse), ADR-0002 (dbt vs migrations), ADR-0007 (token vault), ADR-0008 (shared project)
 
 ## Context
@@ -9,12 +9,12 @@ ADR-0008 puts QBO in its own namespace inside the shared Supabase project `vosk.
 Read-only check on 2026-09-25: no `qbo` schema or roles exist yet, and the database has no database-wide default privileges, so a new schema grants nothing to `PUBLIC`, `anon` or `authenticated`.
 The shared migration history already holds the other app's 8 migrations, so `supabase db push` from this repo cannot be used on `vosk.dev` (ADR-0008).
 
-## Decision — accepted
+## Decision — schema
 
 - **One schema, `qbo`, holds every QBO object.** Spec §2 names stay unchanged and are schema-qualified (`qbo.raw_entity`, `qbo.vw_fact_gl`).
 - Power BI navigates to schema `qbo` as a constant; its parameters stay `Server`, `Database`, `FY_START` (spec §4).
 
-## Decision — proposed
+## Decision — roles, exposure, migration apply path
 
 **Roles** (created `nologin` by a migration; the USER enables login and sets passwords outside the repo; clients connect through the session pooler as `<role>.<project-ref>`):
 
@@ -36,6 +36,7 @@ The shared migration history already holds the other app's 8 migrations, so `sup
 - Each file is applied to `vosk.dev` through the Supabase MCP `apply_migration` under the same name, one file per call, after the USER approves that call.
 - `supabase db push` never runs against `vosk.dev`.
 - Drift check: compare the `qbo_*` names in `list_migrations` with the folder.
+- Manual verification runs on `vosk.dev` itself, right after each apply (USER 2026-09-25: no local database; CLAUDE.md testing policy).
 - Fresh-DB gate: apply the folder in order to a disposable `supabase/postgres` container in CI.
 - This needs the MCP with writes enabled, which replaces the earlier `read_only=true` suggestion. Guards:
   - a Claude Code `ask` rule on `mcp__supabase__apply_migration`;

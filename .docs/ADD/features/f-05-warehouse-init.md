@@ -1,4 +1,4 @@
-> **DRAFT — projection state.** Proposed migration plan for review. Nothing here has been applied to `vosk.dev`. The SQL has not been executed yet: it runs on a disposable Postgres before any apply.
+> **DRAFT — projection state.** Migration plan for review. Nothing here has been applied to `vosk.dev` yet. There is no local database: each migration is applied straight to `vosk.dev`, one at a time, after USER approval, and verified there (USER 2026-09-25).
 
 # F-05 · Warehouse init — migration plan (schema `qbo`)
 
@@ -16,7 +16,7 @@
 | `fact_budget` | migration | open: budget source (spec issue 3) |
 | `stg_*` views | dbt | — |
 | `vw_fact_gl`, `vw_dim_account`, `vw_dim_date`, `vw_dim_class`, `vw_fact_budget` | dbt (`grants: select → qbo_reader`) | — |
-| token functions (ADR-0007) | migration, after ADR-0007 is accepted | — |
+| token functions (ADR-0007) | migration M5 | — |
 
 ## Migrations
 
@@ -28,7 +28,7 @@ Files: `supabase/migrations/<yyyymmddhhmmss>_qbo_<name>.sql`. Each is applied wi
 | M2 | `qbo_raw_and_control` | `raw_entity`, `sync_state`, `qa_reports_snapshot` + grants |
 | M3 | `qbo_dimensions` | 5 dimension tables + grants |
 | M4 | `qbo_facts` | `fact_gl`, `fact_budget` + grants |
-| M5 | `qbo_token_vault` | token functions. **Waits for ADR-0007** |
+| M5 | `qbo_token_vault` | Vault token functions (ADR-0007) |
 
 ### M1 · `qbo_init_schema_and_roles`
 
@@ -194,9 +194,9 @@ grant select, insert, update, delete
     to qbo_etl;
 ```
 
-### M5 · `qbo_token_vault` (waits for ADR-0007)
+### M5 · `qbo_token_vault`
 
-Signatures only, until ADR-0007 is accepted:
+ADR-0007 is accepted; the SQL is written together with the M1–M4 files. Signatures:
 - `qbo.refresh_token_lock() returns text`: locks and returns `qbo_refresh_token`
 - `qbo.refresh_token_store(p_token text) returns void`: rotates it
 
@@ -244,14 +244,21 @@ models:
 
 ## Open items
 
-1. ADR-0007 confirmation → M5.
+1. USER approval of the changes vs spec §2 and of the `stmt_section` check.
 2. Budget source for real clients (spec issue 3). `fact_budget` is created empty.
 3. Staging shapes (spec issue 2): `stg_*` are dbt views over `raw_entity`. Recommendation: Track C writes QBO-shaped JSON into `raw_entity`, so demo data runs through the same pipeline.
 4. `FY_START` lives in two places (dbt var for `dim_date`, Power BI parameter). Settle in Phase 4 together with the `TOTALYTD` issue.
-5. Migration apply path (ADR-0003, proposed) and the MCP `ask` rule.
 
 ## Verification after apply (read-only)
 
 - `list_tables` on schema `qbo`: 10 tables, owner `postgres`
 - grants per role from `information_schema.role_table_grants` match the tables above; `anon` and `authenticated` have none
 - `get_advisors` security: no new findings for `qbo`; performance: only the accepted INFO notices (ADR-0003)
+
+Rollback, only if a migration leaves `qbo` half-built (destructive; the USER runs it):
+
+```sql
+drop schema qbo cascade;
+drop role qbo_etl;
+drop role qbo_reader;
+```

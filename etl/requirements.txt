@@ -1,0 +1,8 @@
+# Python 3.12 environment for etl/ and dbt/ (ADR-0002).
+# Create: py -V:3.12 -m venv etl/.venv
+# Install: etl/.venv/Scripts/python -m pip install -r etl/requirements.txt
+dbt-core==1.12.5
+dbt-postgres==1.11.0
+psycopg2-binary==2.9.10  # 2.9.13's _psycopg .pyd is blocked by Windows Smart App Control; 2.9.10 loads
+pytest==9.1.1
+ruff==0.16.9

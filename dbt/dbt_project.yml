@@ -1,0 +1,30 @@
+# QBO P&L transforms (ADR-0002): builds stg_* / vw_* views and fills the
+# migration-owned dim_* / fact_* tables in schema qbo (F-05). dbt never creates,
+# alters or drops those tables.
+name: qbo_pnl
+version: "0.1.0"
+config-version: 2
+profile: qbo_pnl
+
+clean-targets:
+  - target
+  - dbt_packages
+
+flags:
+  send_anonymous_usage_stats: false
+
+vars:
+  fy_start: 1                                # FY start month for dim_date fiscal columns (spec §2.2)
+
+models:
+  qbo_pnl:
+    staging:
+      +materialized: view                    # stg_*
+    marts:                                   # dim_* / fact_* tables created by migrations
+      +materialized: incremental
+      +full_refresh: false                   # never drop or recreate a migration-owned table
+      +on_schema_change: append_new_columns  # insert only the model's columns; identity keys stay DB-generated
+    serve:
+      +materialized: view                    # vw_*
+      +grants:
+        select: ['qbo_reader']

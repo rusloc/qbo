@@ -206,7 +206,7 @@
 <div class="page">
   <header class="masthead">
     <div class="intro">
-      <span class="eyebrow">QBO P&amp;L &middot; C:\__PBI\QBO &middot; written 2026-09-25</span>
+      <span class="eyebrow">QBO P&amp;L &middot; C:\__PBI\QBO &middot; updated 2026-09-25</span>
       <h1>Tool setup guide</h1>
       <p class="lede">What is already in place, and the steps left to make the whole chain run: QuickBooks Online to Supabase, then into Power BI and a React report. Tick a step when it's done. Ticks are saved in this browser only.</p>
     </div>
@@ -232,9 +232,9 @@
         <li><a href="#s3" data-step="s3"><span class="num">3</span>Power BI Desktop settings</a></li>
         <li><a href="#s4" data-step="s4"><span class="num">4</span>Verify the agent kit</a></li>
         <li><a href="#s5" data-step="s5"><span class="num">5</span>Start the Git repository</a></li>
-        <li><a href="#s6" data-step="s6"><span class="num">6</span>Python 3.12 for the ETL</a></li>
+        <li><a href="#s6" data-step="s6"><span class="num">6</span>Python 3.12 and dbt</a></li>
         <li><a href="#s7" data-step="s7"><span class="num">7</span>Intuit app and sandbox</a></li>
-        <li><a href="#s8" data-step="s8"><span class="num">8</span>Supabase project and CLI</a></li>
+        <li><a href="#s8" data-step="s8"><span class="num">8</span>Supabase logins and env</a></li>
         <li><a href="#s9" data-step="s9"><span class="num">9</span>Power BI to Supabase</a></li>
         <li><a href="#s10" data-step="s10"><span class="num">10</span>React report workspace</a></li>
         <li><a href="#s11" data-step="s11"><span class="num">11</span>pg-sqldev catalog MCP</a></li>
@@ -270,7 +270,7 @@
           <div class="node core">
             <strong>Supabase Postgres</strong>
             <span class="layers"><span class="l">raw</span><span class="sep">&rarr;</span><span class="l">stg</span><span class="sep">&rarr;</span><span class="l">mart</span><span class="sep">&rarr;</span><span class="l">vw_*</span></span>
-            <span class="sub">Migrations in <code>supabase/</code>. Both consumers read the <code>vw_*</code> views only.</span>
+            <span class="sub">Schema <code>qbo</code> in the shared <code>vosk.dev</code> project. Migrations in <code>supabase/</code>, transforms in <code>dbt/</code>. Both consumers read the <code>vw_*</code> views only.</span>
             <span class="ref">Step 8</span>
           </div>
           <div class="arrow" aria-hidden="true">&rarr;</div>
@@ -292,24 +292,26 @@
       <!-- Done -->
       <section id="done">
         <div class="section-head">
-          <span class="eyebrow">Done in this session</span>
+          <span class="eyebrow">Done so far</span>
           <h2>Already set up</h2>
-          <p class="muted">Claude created these files in <code>C:\__PBI\QBO</code>. No global tools were installed and nothing was sent to a cloud service.</p>
+          <p class="muted">Files and settings in <code>C:\__PBI\QBO</code>. Only read-only queries have run against Supabase so far; nothing has been written there.</p>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>What</th><th>Where</th><th>State</th></tr></thead>
             <tbody>
               <tr><td>Project rules</td><td><code>CLAUDE.md</code></td><td>Built from your template (BI track, plus ETL/Supabase and React sections), merged with the kit's Rule&nbsp;#1, skills list and tool routing</td></tr>
-              <tr><td>Docs skeleton</td><td><code>.docs/ADR</code>, <code>.docs/ADD</code>, <code>.docs/model</code></td><td>ADR-0001 (Supabase) accepted. Six open decisions listed in <code>tech-stack.md</code></td></tr>
+              <tr><td>Docs skeleton</td><td><code>.docs/ADR</code>, <code>.docs/ADD</code>, <code>.docs/model</code></td><td>ADR-0001, 0002, 0003, 0007 and 0008 accepted; three open decisions (0004&ndash;0006) in <code>tech-stack.md</code>. Draft SQL plan for schema <code>qbo</code> in <code>.docs/ADD/features/f-05-warehouse-init.md</code></td></tr>
               <tr><td>Logs</td><td><code>.log/</code></td><td>Today's coms, daily and plan files; <code>features_and_decisions.md</code></td></tr>
-              <tr><td>Code folders</td><td><code>etl/</code> <code>fixtures/</code> <code>demo_data/</code> <code>PNL/</code></td><td>Empty, kept with <code>.gitkeep</code></td></tr>
+              <tr><td>Python environment</td><td><code>etl/.venv</code>, <code>etl/requirements.txt</code></td><td><span class="chip ok">Ready</span> Python 3.12.10 with dbt-core 1.12.5, dbt-postgres 1.11.0, pytest and ruff</td></tr>
+              <tr><td>dbt project</td><td><code>dbt/</code></td><td><span class="chip ok">Parses</span> Project <code>qbo_pnl</code>, no models yet. Connection settings come from env vars (step 8)</td></tr>
+              <tr><td>Code folders</td><td><code>fixtures/</code> <code>demo_data/</code> <code>PNL/</code></td><td>Empty, kept with <code>.gitkeep</code></td></tr>
               <tr><td>Skills</td><td><code>.claude/skills</code> (9), <code>.claude/common</code> (25 files)</td><td><span class="chip ok">Installed</span> 916 links checked; the 17 broken ones are the known upstream gaps</td></tr>
-              <tr><td>Permissions</td><td><code>.claude/settings.json</code></td><td>Kit allow and deny lists. Denies reading <code>.env*</code>, git writes and recursive deletes</td></tr>
-              <tr><td>MCP server</td><td><code>.mcp.json</code></td><td><span class="chip wait">Needs approval</span> <code>powerbi-modeling</code>, read-write, <code>@latest</code></td></tr>
+              <tr><td>Permissions</td><td><code>.claude/settings.json</code></td><td>Kit allow and deny lists. Denies reading <code>.env*</code>, git writes and recursive deletes. Asks you before every Supabase migration or edge function deploy</td></tr>
+              <tr><td>MCP servers</td><td><code>.mcp.json</code></td><td><span class="chip ok">Connected</span> <code>powerbi-modeling</code> (read-write, <code>@latest</code>) and <code>supabase</code> (limited to <code>vosk.dev</code>; migrations need your approval)</td></tr>
               <tr><td>Validator</td><td><code>_scripts/validate.py</code></td><td><span class="chip ok">Green</span> JSON, encoding and TMDL checks pass</td></tr>
               <tr><td>Optional MCP</td><td><code>_mcp/pg-sqldev</code></td><td><span class="chip opt">Source only</span> Not installed, not registered (step 11)</td></tr>
-              <tr><td>Git ignore rules</td><td><code>.gitignore</code></td><td>Kit defaults plus Python, Node, Supabase CLI state and the kit source folder</td></tr>
+              <tr><td>Git ignore rules</td><td><code>.gitignore</code></td><td>Kit defaults plus Python, Node, Supabase CLI state, dbt output and the kit source folder</td></tr>
               <tr><td>Kit source</td><td><code>pbi-fabric-agent-kit/</code></td><td>Unpacked, all 223 SHA-256 checksums match. Gitignored</td></tr>
             </tbody>
           </table>
@@ -321,7 +323,7 @@
         <div class="section-head">
           <span class="eyebrow">Checked 2026-09-25</span>
           <h2>This PC today</h2>
-          <p class="muted">Most of the Power BI toolchain is already installed. What's missing is on the data side: Python 3.12 and the Supabase CLI.</p>
+          <p class="muted">Everything the build needs is installed. The Supabase CLI is no longer required: migrations go through the Supabase MCP (ADR-0003).</p>
         </div>
         <div class="table-wrap">
           <table>
@@ -335,15 +337,18 @@
               <tr><td>powerbi-desktop</td><td>Desktop bridge: status, screenshots</td><td class="ver">&mdash;</td><td><span class="chip ok">Installed</span></td></tr>
               <tr><td>Azure CLI <code>az</code></td><td>REST calls the Power BI skills make</td><td class="ver">&mdash;</td><td><span class="chip ok">Installed</span></td></tr>
               <tr><td><code>jq</code></td><td>JSON filtering</td><td class="ver">1.8.2</td><td><span class="chip ok">Installed</span></td></tr>
-              <tr><td>Fabric CLI <code>fab</code></td><td>Workspace items, access</td><td class="ver">on Python 3.13</td><td><span class="chip ok">Installed</span></td></tr>
-              <tr><td>Python 3.12</td><td>ETL (spec &sect;0)</td><td class="ver">3.14 default, 3.13</td><td><span class="chip miss">Missing</span></td></tr>
-              <tr><td>Supabase CLI</td><td>Migrations, link, push</td><td class="ver">&mdash;</td><td><span class="chip miss">Missing</span></td></tr>
-              <tr><td>Docker Desktop</td><td>Only for a local Supabase stack</td><td class="ver">&mdash;</td><td><span class="chip opt">Optional</span></td></tr>
+              <tr><td>Fabric CLI <code>fab</code></td><td>Workspace items, access</td><td class="ver">1.7.0 on Python 3.12</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Python 3.12</td><td>ETL and dbt (spec &sect;0)</td><td class="ver">3.12.10, only runtime</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>dbt-core / dbt-postgres</td><td>Transforms (ADR-0002), in <code>etl/.venv</code></td><td class="ver">1.12.5 / 1.11.0</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Supabase MCP</td><td>Schema checks and migrations on <code>vosk.dev</code></td><td class="ver">hosted</td><td><span class="chip ok">Connected</span></td></tr>
+              <tr><td>Supabase CLI</td><td>Not needed: migrations go through the MCP</td><td class="ver">&mdash;</td><td><span class="chip opt">Optional</span></td></tr>
+              <tr><td>Docker Desktop</td><td>Not used: SQL is verified on <code>vosk.dev</code></td><td class="ver">&mdash;</td><td><span class="chip opt">Optional</span></td></tr>
               <tr><td><code>psql</code></td><td>Ad-hoc SQL from the terminal</td><td class="ver">&mdash;</td><td><span class="chip opt">Optional</span></td></tr>
             </tbody>
           </table>
         </div>
         <p class="note">Windows long paths are off. That's fine here: the deepest installed path is about 110 characters, well under the 260 limit.</p>
+        <p class="note warn"><strong>Smart App Control is on.</strong> It blocks compiled Python packages that Windows doesn't trust yet. It blocked psycopg2-binary 2.9.13, the Postgres driver dbt needs; 2.9.10 loads, so <code>etl/requirements.txt</code> pins it. The fixes table at the end says what to do if it happens again.</p>
       </section>
 
       <!-- Steps -->
@@ -477,20 +482,18 @@ git push -u origin dev</pre></div>
             <div class="step-head">
               <span class="step-num">6</span>
               <div class="step-title">
-                <h3>Install Python 3.12 for the ETL</h3>
-                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+                <h3>Python 3.12, the virtual environment and dbt</h3>
+                <div class="meta"><span class="chip ok">Done 2026-09-25</span><span class="chip you">You</span><span class="chip claude">Claude</span></div>
               </div>
               <label class="done-toggle"><input type="checkbox" id="chk-s6" data-step="s6"> Done</label>
             </div>
             <div class="step-body">
-              <p>The spec fixes Python 3.12. This PC has 3.14 as default and 3.13 for <code>fab</code>. Add 3.12 next to them and give the ETL its own virtual environment.</p>
-              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre>py install 3.12
-cd C:\__PBI\QBO
+              <p>Python 3.12.10 is the only runtime on this PC. Claude created <code>etl\.venv</code> and installed the pinned packages from <code>etl\requirements.txt</code>: dbt-core, dbt-postgres, pytest and ruff. The ETL's own packages come in Phase 1. To rebuild the environment:</p>
+              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre>cd C:\__PBI\QBO
 py -V:3.12 -m venv etl\.venv
-etl\.venv\Scripts\Activate.ps1
-python --version            <span class="c"># expect Python 3.12.x</span>
-python -m pip install --upgrade pip</pre></div>
-              <p class="note">Leave <code>fab</code> on 3.13: <code>ms-fabric-cli</code> does not install on 3.14. Claude adds the ETL dependencies in Phase 1.</p>
+etl\.venv\Scripts\python.exe -m pip install -r etl\requirements.txt
+etl\.venv\Scripts\python.exe --version     <span class="c"># expect Python 3.12.x</span></pre></div>
+              <p class="note"><code>fab</code> runs on 3.12 as well. Update it with <code>py -V:3.12 -m pip install --upgrade ms-fabric-cli pymsalruntime</code>.</p>
             </div>
           </li>
 
@@ -527,33 +530,35 @@ DB_URL=</pre></div>
             <div class="step-head">
               <span class="step-num">8</span>
               <div class="step-title">
-                <h3>Create the Supabase project and install the CLI</h3>
-                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+                <h3>Supabase: database logins and connection settings</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip wait">After migration M1</span></div>
               </div>
               <label class="done-toggle"><input type="checkbox" id="chk-s8" data-step="s8"> Done</label>
             </div>
             <div class="step-body">
+              <p>The warehouse lives in the shared project <code>vosk.dev</code>, in its own schema <code>qbo</code> (ADR-0008, ADR-0003). This project doesn't use <code>supabase link</code> or <code>supabase db push</code>: the migration history of <code>vosk.dev</code> also holds another app's migrations. Claude applies each QBO migration through the Supabase MCP, and Claude Code asks you before every one.</p>
               <ol>
-                <li>At <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com/dashboard</a>, open the project <strong><code>vosk.dev</code></strong>, which hosts this warehouse. If it doesn't exist yet, create it in a region near you and your Power BI tenant. Keep the database password in a password manager. The project ref is the ID in the dashboard URL; <code>supabase link</code> needs it below.</li>
-                <li>Install the CLI with Scoop. Supabase does not support a global npm install.</li>
+                <li>Once migration M1 has created the roles, enable their logins in the Supabase SQL editor. Keep both passwords in your password manager.</li>
               </ol>
-              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre><span class="c"># Scoop (skip the first two lines if you already have it)</span>
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-
-scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-scoop install supabase
-supabase --version
-
-<span class="c"># link the project folder to the Supabase project</span>
-cd C:\__PBI\QBO
-supabase login
-supabase init                              <span class="c"># creates supabase/ ; answer N to the Deno settings prompt</span>
-supabase link --project-ref &lt;project-ref&gt;</pre></div>
+              <div class="code"><span class="lang">SQL editor</span><button class="copy" type="button">Copy</button><pre>alter role qbo_etl    with login password '&lt;from password manager&gt;';
+alter role qbo_reader with login password '&lt;from password manager&gt;';</pre></div>
+              <ol start="2">
+                <li>Dashboard &rarr; <strong>Connect</strong> &rarr; <strong>Session pooler</strong>: note the host. The user name is <code>qbo_etl.&lt;project-ref&gt;</code>, the port is 5432, and SSL is required. Add these lines to <code>etl/.env</code>: <code>DB_URL</code> is for <code>qbo_sync</code>, the other lines are for dbt.</li>
+              </ol>
+              <div class="code"><span class="lang">etl/.env (add)</span><button class="copy" type="button">Copy</button><pre>DB_URL=postgresql://qbo_etl.&lt;project-ref&gt;:&lt;password&gt;@&lt;pooler-host&gt;:5432/postgres?sslmode=require
+QBO_DB_HOST=&lt;pooler-host&gt;
+QBO_DB_PORT=5432
+QBO_DB_USER=qbo_etl.&lt;project-ref&gt;
+QBO_DB_NAME=postgres
+DBT_ENV_SECRET_QBO_DB_PASSWORD=&lt;password&gt;</pre></div>
               <ol start="3">
-                <li>Dashboard &rarr; <strong>Connect</strong> &rarr; <strong>Session pooler</strong>. Copy that URI into <code>DB_URL</code> in <code>etl/.env</code>. The user name has the form <code>postgres.&lt;project-ref&gt;</code>, the port is 5432, and SSL is required.</li>
+                <li>Check dbt's connection. The second line loads <code>etl/.env</code> into this terminal session only.</li>
               </ol>
-              <p class="note">Use the session pooler, not the direct host: the direct host is IPv6-only unless you buy the IPv4 add-on, and Windows networks are often IPv4-only. Docker is only needed for <code>supabase start</code> (a local stack); this project tests against the remote dev project. Claude writes migrations; <code>supabase db push</code> runs only after you approve it.</p>
+              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre>cd C:\__PBI\QBO
+Get-Content etl\.env | Where-Object { $_ -match '^[A-Za-z_][A-Za-z0-9_]*=' } | ForEach-Object { $k, $v = $_ -split '=', 2; Set-Item "env:$k" $v }
+cd dbt
+..\etl\.venv\Scripts\dbt.exe debug        <span class="c"># expect: All checks passed!</span></pre></div>
+              <p class="note">Use the session pooler, not the direct host: the direct host is IPv6-only unless you buy the IPv4 add-on, and Windows networks are often IPv4-only. If the password contains <code>@</code>, <code>:</code> or <code>/</code>, URL-encode it inside <code>DB_URL</code> only.</p>
             </div>
           </li>
 
@@ -563,15 +568,15 @@ supabase link --project-ref &lt;project-ref&gt;</pre></div>
               <span class="step-num">9</span>
               <div class="step-title">
                 <h3>Connect Power BI Desktop to Supabase</h3>
-                <div class="meta"><span class="chip you">You</span><span class="chip wait">After the serve views exist</span><span class="chip wait">ADR-0003</span></div>
+                <div class="meta"><span class="chip you">You</span><span class="chip wait">After the serve views exist</span></div>
               </div>
               <label class="done-toggle"><input type="checkbox" id="chk-s9" data-step="s9"> Done</label>
             </div>
             <div class="step-body">
               <ol>
                 <li>Get data &rarr; <strong>PostgreSQL database</strong>. Server: <code>&lt;session-pooler-host&gt;:5432</code>. Database: <code>postgres</code>. Mode: Import.</li>
-                <li>Credentials: Database, with the read-only role that ADR-0003 creates (<code>&lt;role&gt;.&lt;project-ref&gt;</code>). Don't store the <code>postgres</code> admin password in the report.</li>
-                <li>Select the <code>vw_*</code> views only. Server and database become the parameters <code>Server</code> and <code>Database</code>, next to <code>FY_START</code>.</li>
+                <li>Credentials: Database, as <code>qbo_reader.&lt;project-ref&gt;</code>, the read-only role from ADR-0003. Don't store the <code>postgres</code> admin password in the report.</li>
+                <li>Select the <code>vw_*</code> views in schema <code>qbo</code> only. Server and database become the parameters <code>Server</code> and <code>Database</code>, next to <code>FY_START</code>.</li>
               </ol>
               <p class="note">If Desktop reports that the remote certificate is invalid, download the CA certificate from the Supabase dashboard (Database settings &rarr; SSL configuration). Import it under Trusted Root Certification Authorities for the current user (<code>certmgr.msc</code>), then connect again. How the Power BI Service refreshes (cloud connection or gateway) is decided in ADR-0006.</p>
             </div>
@@ -606,7 +611,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon or publishable key&gt;</pre></div>
               <span class="step-num">11</span>
               <div class="step-title">
                 <h3>Optional: pg-sqldev, a read-only catalog MCP for Claude</h3>
-                <div class="meta"><span class="chip you">You</span><span class="chip claude">Claude</span><span class="chip wait">After step 8 and ADR-0003</span></div>
+                <div class="meta"><span class="chip you">You</span><span class="chip claude">Claude</span><span class="chip wait">After step 8</span></div>
               </div>
               <label class="done-toggle"><input type="checkbox" id="chk-s11" data-step="s11"> Done</label>
             </div>
@@ -631,15 +636,12 @@ npm test</pre></div>
         <div class="section-head">
           <span class="eyebrow">Open decisions</span>
           <h2>What still needs an ADR</h2>
-          <p class="muted">Listed in <code>.docs/ADD/tech-stack.md</code>. Claude won't build against any of these until the ADR is accepted.</p>
+          <p class="muted">Listed in <code>.docs/ADD/tech-stack.md</code>. Claude won't build against any of these until the ADR is accepted. Decided on 2026-09-25: ADR-0002 dbt for transforms, ADR-0003 schema <code>qbo</code> and roles, ADR-0007 refresh token in Supabase Vault, ADR-0008 shared <code>vosk.dev</code> project.</p>
         </div>
         <div class="decisions">
-          <div class="decision"><span class="id">ADR-0002</span><strong>Transforms</strong><span class="sub">Plain SQL or dbt-core for raw &rarr; stg &rarr; mart.</span></div>
-          <div class="decision"><span class="id">ADR-0003</span><strong>Schemas, API exposure, roles</strong><span class="sub">Which schemas the Data API sees; ETL writer and Power BI reader roles. Blocks steps 9 and 11.</span></div>
           <div class="decision"><span class="id">ADR-0004</span><strong>Where qbo_sync runs</strong><span class="sub">The daily CDC run: GitHub Actions, an always-on machine, or something else.</span></div>
           <div class="decision"><span class="id">ADR-0005</span><strong>React report stack</strong><span class="sub">Plotting library, build tool, hosting. Blocks step 10.</span></div>
           <div class="decision"><span class="id">ADR-0006</span><strong>Power BI Service</strong><span class="sub">Refresh path (cloud connection or gateway) and deploy tool.</span></div>
-          <div class="decision"><span class="id">ADR-0007</span><strong>Token vault</strong><span class="sub">Where the rotating QBO refresh token is stored and locked.</span></div>
         </div>
       </section>
 
@@ -657,8 +659,10 @@ npm test</pre></div>
               <tr><td>Freeze the MCP server version</td><td>In <code>.mcp.json</code>, replace <code>@latest</code> with a version, for example <code>0.5.0-beta.15</code></td></tr>
               <tr><td>Make the MCP server read-only</td><td>Add <code>"--readonly"</code> as the last arg in <code>.mcp.json</code>, then reconnect with <code>/mcp</code></td></tr>
               <tr><td>Update the report CLIs</td><td><code>npm update -g @microsoft/powerbi-report-authoring-cli @microsoft/powerbi-desktop-bridge-cli</code></td></tr>
-              <tr><td>Update the Fabric CLI</td><td><code>py -V:3.13 -m pip install --upgrade ms-fabric-cli</code></td></tr>
-              <tr><td>Validate the repo</td><td><code>py -V:3.13 _scripts/validate.py</code></td></tr>
+              <tr><td>Update the Fabric CLI</td><td><code>py -V:3.12 -m pip install --upgrade ms-fabric-cli pymsalruntime</code></td></tr>
+              <tr><td>Validate the repo</td><td><code>py -V:3.12 _scripts/validate.py</code></td></tr>
+              <tr><td>Rebuild the Python environment</td><td><code>py -V:3.12 -m venv etl\.venv</code>, then <code>etl\.venv\Scripts\python.exe -m pip install -r etl\requirements.txt</code></td></tr>
+              <tr><td>Check the dbt project</td><td>In <code>dbt\</code>, with the env from step 8 loaded: <code>..\etl\.venv\Scripts\dbt.exe parse</code> checks the project; <code>dbt.exe debug</code> also tests the connection</td></tr>
             </tbody>
           </table>
         </div>
@@ -671,6 +675,7 @@ npm test</pre></div>
               <tr><td>Model reads work, writes fail in the Service</td><td>Build permission instead of Write, XMLA not Read Write, or workspace role too low (step 3).</td></tr>
               <tr><td><code>powerbi-desktop reload</code> lost work</td><td>It discards unsaved Desktop edits. Run <code>powerbi-desktop status</code> first and never reload while <code>hasUnsavedChanges</code> is true.</td></tr>
               <tr><td>Supabase connection times out from Windows</td><td>You are on the IPv6-only direct host. Use the session pooler URI (step 8).</td></tr>
+              <tr><td>"DLL load failed &hellip; An Application Control policy has blocked this file"</td><td>Smart App Control blocked a compiled package. Install an older release of that package in <code>etl\.venv</code> and pin it in <code>etl\requirements.txt</code>; psycopg2-binary is pinned to 2.9.10 for this reason. Turning Smart App Control off is a last resort: on many Windows builds it can't be turned back on without resetting Windows.</td></tr>
             </tbody>
           </table>
         </div>

@@ -71,6 +71,10 @@
       "PowerShell(gh secret *)",
       "PowerShell(npm publish*)",
       "PowerShell(pnpm publish*)"
+    ],
+    "ask": [
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__deploy_edge_function"
     ]
   }
 }
