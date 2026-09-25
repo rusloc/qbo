@@ -1,0 +1,749 @@
+<title>QBO P&amp;L Setup Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@500;600&display=swap">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f4f6f8;
+    --surface-2: #eaedf1;
+    --ink: #1f2733;
+    --muted: #586271;
+    --faint: #9aa4af;
+    --rule: #d8dde3;
+    --accent: #2a5a86;
+    --accent-soft: #e6eef6;
+    --pos: #188038;
+    --pos-soft: #e4f2e8;
+    --neg: #c5221f;
+    --neg-soft: #fbe9e8;
+    --warn: #875800;
+    --warn-soft: #fbf0d9;
+    --code-bg: #f4f6f8;
+    --font-body: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-head: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #11151b;
+      --surface: #181e26;
+      --surface-2: #212933;
+      --ink: #e3e7ed;
+      --muted: #a3adb9;
+      --faint: #6e7884;
+      --rule: #2c3440;
+      --accent: #86b4e0;
+      --accent-soft: #1b2939;
+      --pos: #5bc27f;
+      --pos-soft: #15281d;
+      --neg: #f08a80;
+      --neg-soft: #33191a;
+      --warn: #e3b660;
+      --warn-soft: #2d2413;
+      --code-bg: #0d1116;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #11151b;
+    --surface: #181e26;
+    --surface-2: #212933;
+    --ink: #e3e7ed;
+    --muted: #a3adb9;
+    --faint: #6e7884;
+    --rule: #2c3440;
+    --accent: #86b4e0;
+    --accent-soft: #1b2939;
+    --pos: #5bc27f;
+    --pos-soft: #15281d;
+    --neg: #f08a80;
+    --neg-soft: #33191a;
+    --warn: #e3b660;
+    --warn-soft: #2d2413;
+    --code-bg: #0d1116;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .page {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 40px 80px;
+  }
+  h1, h2, h3 { font-family: var(--font-head); font-weight: 600; line-height: 1.25; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.35rem; }
+  h3 { font-size: 1.05rem; }
+  p { margin: 0; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  code, kbd { font-family: var(--font-mono); font-size: 0.88em; }
+  :not(pre) > code { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
+  .eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+
+  /* Masthead */
+  .masthead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 40px; align-items: end; padding-bottom: 28px; border-bottom: 1px solid var(--rule); }
+  .masthead .intro { display: grid; gap: 10px; max-width: 68ch; }
+  .lede { font-size: 1.05rem; color: var(--muted); }
+  .tally { min-width: 240px; font-variant-numeric: tabular-nums; }
+  .tally-row { display: flex; justify-content: space-between; gap: 24px; padding: 3px 0; color: var(--muted); font-size: 0.92rem; }
+  .tally-row.total { color: var(--ink); font-weight: 600; border-top: 1px solid var(--ink); border-bottom: 3px double var(--ink); margin-top: 4px; padding: 5px 0; }
+  .tally-row span:last-child { font-family: var(--font-mono); }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; margin-top: 36px; }
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; display: grid; gap: 18px; font-size: 0.9rem; }
+  .toc ol, .toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .toc a { display: flex; gap: 8px; align-items: baseline; color: var(--muted); text-decoration: none; padding: 3px 6px; border-radius: 4px; }
+  .toc a:hover { background: var(--surface); color: var(--ink); }
+  .toc .num { font-family: var(--font-mono); font-size: 0.8rem; min-width: 1.6em; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .toc a.is-done { color: var(--faint); text-decoration: line-through; text-decoration-color: var(--faint); }
+  .toc a.is-done .num { color: var(--pos); }
+  main { display: grid; gap: 56px; min-width: 0; }
+  section { display: grid; gap: 18px; scroll-margin-top: 20px; }
+  .section-head { display: grid; gap: 6px; max-width: 68ch; }
+
+  /* Flow diagram */
+  .flow { display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1.25fr) 28px minmax(0,1fr); align-items: center; gap: 0; }
+  .node { border: 1px solid var(--rule); background: var(--bg); border-radius: 6px; padding: 12px 14px; display: grid; gap: 4px; }
+  .node strong { font-family: var(--font-head); font-weight: 600; font-size: 0.95rem; }
+  .node .sub { font-size: 0.82rem; color: var(--muted); line-height: 1.45; }
+  .node .ref { font-family: var(--font-mono); font-size: 0.74rem; color: var(--accent); }
+  .node.core { border-color: var(--ink); border-width: 1.5px; }
+  .arrow { text-align: center; color: var(--faint); font-size: 1.1rem; }
+  .fork { display: grid; gap: 10px; }
+  .layers { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .layers span.l { background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 0 5px; }
+  .layers span.sep { color: var(--faint); }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-family: var(--font-head); font-weight: 500; font-size: 0.8rem; color: var(--muted); background: var(--surface); letter-spacing: 0.02em; }
+  td.ver { font-family: var(--font-mono); font-size: 0.82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Chips */
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.76rem; font-weight: 600; line-height: 1; padding: 4px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip.ok { color: var(--pos); background: var(--pos-soft); }
+  .chip.miss { color: var(--neg); background: var(--neg-soft); }
+  .chip.opt { color: var(--muted); background: var(--surface); border-color: var(--rule); }
+  .chip.wait { color: var(--warn); background: var(--warn-soft); }
+  .chip.you { color: var(--accent); background: var(--accent-soft); }
+  .chip.claude { color: var(--ink); background: var(--surface-2); }
+  .chip.plain::before { display: none; }
+
+  /* Steps */
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .step { border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); overflow: hidden; }
+  .step.is-done { background: var(--surface); }
+  .step-head { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 14px; align-items: start; padding: 16px 18px; }
+  .step-num { font-family: var(--font-mono); font-weight: 500; font-size: 0.95rem; color: var(--muted); width: 2.2em; height: 2.2em; border: 1px solid var(--rule); border-radius: 50%; display: grid; place-items: center; font-variant-numeric: tabular-nums; background: var(--bg); }
+  .step.is-done .step-num { color: var(--pos); border-color: var(--pos); }
+  .step-title { display: grid; gap: 8px; }
+  .step-title h3 { padding-top: 5px; }
+  .step.is-done .step-title h3 { color: var(--muted); }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .done-toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 0.85rem; color: var(--muted); cursor: pointer; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); white-space: nowrap; user-select: none; }
+  .done-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--pos); cursor: pointer; }
+  .step-body { padding: 0 18px 18px calc(18px + 2.2em + 14px); display: grid; gap: 12px; max-width: calc(68ch + 60px); }
+  .step-body ol, .step-body ul { margin: 0; padding-left: 1.25em; display: grid; gap: 5px; }
+  .note { font-size: 0.88rem; color: var(--muted); border-left: 2px solid var(--rule); padding-left: 12px; }
+  .note.warn { border-left-color: var(--warn); }
+  .note strong { color: var(--ink); }
+
+  /* Code */
+  .code { position: relative; }
+  .code .lang { position: absolute; top: 8px; left: 12px; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); pointer-events: none; }
+  pre { margin: 0; background: var(--code-bg); border: 1px solid var(--rule); border-radius: 6px; padding: 30px 14px 12px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.55; color: var(--ink); tab-size: 2; }
+  pre .c { color: var(--faint); }
+  .copy { position: absolute; top: 6px; right: 6px; font-family: var(--font-body); font-size: 0.75rem; color: var(--muted); background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 3px 9px; cursor: pointer; }
+  .copy:hover { color: var(--ink); border-color: var(--faint); }
+
+  /* Decision list */
+  .decisions { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .decision { border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+  .decision .id { font-family: var(--font-mono); font-size: 0.78rem; color: var(--warn); }
+  .decision strong { font-family: var(--font-head); font-weight: 600; font-size: 0.95rem; }
+  .decision .sub { font-size: 0.85rem; color: var(--muted); }
+
+  footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 0.85rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+  @media (max-width: 920px) {
+    .layout { grid-template-columns: minmax(0,1fr); gap: 28px; }
+    .toc { position: static; border: 1px solid var(--rule); border-radius: 8px; padding: 14px; }
+    .toc ol { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+    .flow { grid-template-columns: minmax(0,1fr); }
+    .arrow { transform: rotate(90deg); line-height: 1; padding: 4px 0; }
+  }
+  @media (max-width: 640px) {
+    .page { padding-inline: 16px; padding-block: 28px 64px; }
+    h1 { font-size: 1.6rem; }
+    .masthead { grid-template-columns: minmax(0,1fr); }
+    .tally { min-width: 0; }
+    .step-head { grid-template-columns: auto minmax(0,1fr); }
+    .step-head .done-toggle { grid-column: 1 / -1; justify-self: start; }
+    .step-body { padding: 0 16px 16px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .step, .toc a { transition: background-color 0.15s ease, color 0.15s ease; }
+  }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div class="intro">
+      <span class="eyebrow">QBO P&amp;L &middot; C:\__PBI\QBO &middot; written 2026-09-25</span>
+      <h1>Tool setup guide</h1>
+      <p class="lede">What is already in place, and the steps left to make the whole chain run: QuickBooks Online to Supabase, then into Power BI and a React report. Tick a step when it's done. Ticks are saved in this browser only.</p>
+    </div>
+    <div class="tally" aria-live="polite">
+      <div class="tally-row"><span>Steps you can do now</span><span id="t-now">0 / 8</span></div>
+      <div class="tally-row"><span>Later and optional steps</span><span id="t-later">0 / 3</span></div>
+      <div class="tally-row total"><span>Setup complete</span><span id="t-all">0 / 11</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Contents">
+      <div class="eyebrow">Overview</div>
+      <ul>
+        <li><a href="#flow"><span class="num">&middot;</span>How the pieces connect</a></li>
+        <li><a href="#done"><span class="num">&middot;</span>Already set up</a></li>
+        <li><a href="#machine"><span class="num">&middot;</span>This PC today</a></li>
+      </ul>
+      <div class="eyebrow">Steps</div>
+      <ol id="toc-steps">
+        <li><a href="#s1" data-step="s1"><span class="num">1</span>Reload VS Code, approve MCP</a></li>
+        <li><a href="#s2" data-step="s2"><span class="num">2</span>Sign in to Azure and Fabric</a></li>
+        <li><a href="#s3" data-step="s3"><span class="num">3</span>Power BI Desktop settings</a></li>
+        <li><a href="#s4" data-step="s4"><span class="num">4</span>Verify the agent kit</a></li>
+        <li><a href="#s5" data-step="s5"><span class="num">5</span>Start the Git repository</a></li>
+        <li><a href="#s6" data-step="s6"><span class="num">6</span>Python 3.12 for the ETL</a></li>
+        <li><a href="#s7" data-step="s7"><span class="num">7</span>Intuit app and sandbox</a></li>
+        <li><a href="#s8" data-step="s8"><span class="num">8</span>Supabase project and CLI</a></li>
+        <li><a href="#s9" data-step="s9"><span class="num">9</span>Power BI to Supabase</a></li>
+        <li><a href="#s10" data-step="s10"><span class="num">10</span>React report workspace</a></li>
+        <li><a href="#s11" data-step="s11"><span class="num">11</span>pg-sqldev catalog MCP</a></li>
+      </ol>
+      <div class="eyebrow">Reference</div>
+      <ul>
+        <li><a href="#decisions"><span class="num">&middot;</span>Open decisions</a></li>
+        <li><a href="#maint"><span class="num">&middot;</span>Maintenance and fixes</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <!-- Flow -->
+      <section id="flow">
+        <div class="section-head">
+          <span class="eyebrow">Architecture</span>
+          <h2>How the pieces connect</h2>
+          <p class="muted">Each box names the step that sets up its tools.</p>
+        </div>
+        <div class="flow" role="img" aria-label="QuickBooks Online API feeds the Python qbo_sync extractor, which loads Supabase Postgres (raw, staging, mart, serve views). The serve views feed both the Power BI model and the React report.">
+          <div class="node">
+            <strong>QuickBooks Online API v3</strong>
+            <span class="sub">OAuth 2.0, one realm per client. Sandbox only during build.</span>
+            <span class="ref">Step 7</span>
+          </div>
+          <div class="arrow" aria-hidden="true">&rarr;</div>
+          <div class="node">
+            <strong>qbo_sync</strong>
+            <span class="sub">Python 3.12 CLI in <code>etl/</code>: auth, backfill, cdc, status.</span>
+            <span class="ref">Step 6</span>
+          </div>
+          <div class="arrow" aria-hidden="true">&rarr;</div>
+          <div class="node core">
+            <strong>Supabase Postgres</strong>
+            <span class="layers"><span class="l">raw</span><span class="sep">&rarr;</span><span class="l">stg</span><span class="sep">&rarr;</span><span class="l">mart</span><span class="sep">&rarr;</span><span class="l">vw_*</span></span>
+            <span class="sub">Migrations in <code>supabase/</code>. Both consumers read the <code>vw_*</code> views only.</span>
+            <span class="ref">Step 8</span>
+          </div>
+          <div class="arrow" aria-hidden="true">&rarr;</div>
+          <div class="fork">
+            <div class="node">
+              <strong>Power BI model</strong>
+              <span class="sub">PBIP in <code>PNL/</code>, Import mode.</span>
+              <span class="ref">Steps 1&ndash;4, 9</span>
+            </div>
+            <div class="node">
+              <strong>React report</strong>
+              <span class="sub"><code>web/</code>, supabase-js.</span>
+              <span class="ref">Step 10</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Done -->
+      <section id="done">
+        <div class="section-head">
+          <span class="eyebrow">Done in this session</span>
+          <h2>Already set up</h2>
+          <p class="muted">Claude created these files in <code>C:\__PBI\QBO</code>. No global tools were installed and nothing was sent to a cloud service.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>What</th><th>Where</th><th>State</th></tr></thead>
+            <tbody>
+              <tr><td>Project rules</td><td><code>CLAUDE.md</code></td><td>Built from your template (BI track, plus ETL/Supabase and React sections), merged with the kit's Rule&nbsp;#1, skills list and tool routing</td></tr>
+              <tr><td>Docs skeleton</td><td><code>.docs/ADR</code>, <code>.docs/ADD</code>, <code>.docs/model</code></td><td>ADR-0001 (Supabase) accepted. Six open decisions listed in <code>tech-stack.md</code></td></tr>
+              <tr><td>Logs</td><td><code>.log/</code></td><td>Today's coms, daily and plan files; <code>features_and_decisions.md</code></td></tr>
+              <tr><td>Code folders</td><td><code>etl/</code> <code>fixtures/</code> <code>demo_data/</code> <code>PNL/</code></td><td>Empty, kept with <code>.gitkeep</code></td></tr>
+              <tr><td>Skills</td><td><code>.claude/skills</code> (9), <code>.claude/common</code> (25 files)</td><td><span class="chip ok">Installed</span> 916 links checked; the 17 broken ones are the known upstream gaps</td></tr>
+              <tr><td>Permissions</td><td><code>.claude/settings.json</code></td><td>Kit allow and deny lists. Denies reading <code>.env*</code>, git writes and recursive deletes</td></tr>
+              <tr><td>MCP server</td><td><code>.mcp.json</code></td><td><span class="chip wait">Needs approval</span> <code>powerbi-modeling</code>, read-write, <code>@latest</code></td></tr>
+              <tr><td>Validator</td><td><code>_scripts/validate.py</code></td><td><span class="chip ok">Green</span> JSON, encoding and TMDL checks pass</td></tr>
+              <tr><td>Optional MCP</td><td><code>_mcp/pg-sqldev</code></td><td><span class="chip opt">Source only</span> Not installed, not registered (step 11)</td></tr>
+              <tr><td>Git ignore rules</td><td><code>.gitignore</code></td><td>Kit defaults plus Python, Node, Supabase CLI state and the kit source folder</td></tr>
+              <tr><td>Kit source</td><td><code>pbi-fabric-agent-kit/</code></td><td>Unpacked, all 223 SHA-256 checksums match. Gitignored</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Machine -->
+      <section id="machine">
+        <div class="section-head">
+          <span class="eyebrow">Checked 2026-09-25</span>
+          <h2>This PC today</h2>
+          <p class="muted">Most of the Power BI toolchain is already installed. What's missing is on the data side: Python 3.12 and the Supabase CLI.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tool</th><th>Used for</th><th>Version</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>VS Code + Claude Code</td><td>Editor, agent, <code>claude mcp</code> checks</td><td class="ver">CLI 2.1.276</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Node.js / npm</td><td>MCP server via npx, report CLIs, React report</td><td class="ver">24.19.0 / 11.17.0</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Git / GitHub CLI</td><td>Version control</td><td class="ver">2.55.0 / 2.101.0</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Power BI Desktop</td><td>PBIP authoring, render check</td><td class="ver">2.157.1354.0</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>powerbi-report-author</td><td>PBIR validate, visual catalog</td><td class="ver">&mdash;</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>powerbi-desktop</td><td>Desktop bridge: status, screenshots</td><td class="ver">&mdash;</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Azure CLI <code>az</code></td><td>REST calls the Power BI skills make</td><td class="ver">&mdash;</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td><code>jq</code></td><td>JSON filtering</td><td class="ver">1.8.2</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Fabric CLI <code>fab</code></td><td>Workspace items, access</td><td class="ver">on Python 3.13</td><td><span class="chip ok">Installed</span></td></tr>
+              <tr><td>Python 3.12</td><td>ETL (spec &sect;0)</td><td class="ver">3.14 default, 3.13</td><td><span class="chip miss">Missing</span></td></tr>
+              <tr><td>Supabase CLI</td><td>Migrations, link, push</td><td class="ver">&mdash;</td><td><span class="chip miss">Missing</span></td></tr>
+              <tr><td>Docker Desktop</td><td>Only for a local Supabase stack</td><td class="ver">&mdash;</td><td><span class="chip opt">Optional</span></td></tr>
+              <tr><td><code>psql</code></td><td>Ad-hoc SQL from the terminal</td><td class="ver">&mdash;</td><td><span class="chip opt">Optional</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Windows long paths are off. That's fine here: the deepest installed path is about 110 characters, well under the 260 limit.</p>
+      </section>
+
+      <!-- Steps -->
+      <section id="steps">
+        <div class="section-head">
+          <span class="eyebrow">Steps</span>
+          <h2>Setup, in order</h2>
+          <p class="muted">Steps 1&ndash;8 can be done now. Steps 9&ndash;11 depend on later build phases or open decisions.</p>
+        </div>
+
+        <ol class="steps">
+          <!-- 1 -->
+          <li class="step" id="s1" data-group="now">
+            <div class="step-head">
+              <span class="step-num">1</span>
+              <div class="step-title">
+                <h3>Reload VS Code and approve the Power BI MCP server</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s1" data-step="s1"> Done</label>
+            </div>
+            <div class="step-body">
+              <ol>
+                <li>Close <strong>all</strong> VS Code windows, then reopen <code>C:\__PBI\QBO</code>. A plain window reload is not enough if PATH changed.</li>
+                <li>When Claude Code asks about the project MCP server <code>powerbi-modeling</code> from <code>.mcp.json</code>, approve it.</li>
+                <li>Type <code>/mcp</code> in Claude Code and check that <code>powerbi-modeling</code> shows as connected.</li>
+              </ol>
+              <p class="note">The first model call may be refused until the Microsoft EULA is accepted. Claude will ask you; it accepts only on your explicit yes.</p>
+            </div>
+          </li>
+
+          <!-- 2 -->
+          <li class="step" id="s2" data-group="now">
+            <div class="step-head">
+              <span class="step-num">2</span>
+              <div class="step-title">
+                <h3>Sign in to Azure and Fabric</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s2" data-step="s2"> Done</label>
+            </div>
+            <div class="step-body">
+              <p>Run these in your own terminal. Both open a browser sign-in. Use the tenant that will host the Power BI workspace.</p>
+              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre>az login --tenant &lt;tenant-id-or-domain&gt;
+fab auth login
+
+<span class="c"># check who is signed in (prints no tokens)</span>
+az account show --query "{user:user.name, tenant:tenantId}" -o table
+fab auth status</pre></div>
+              <p class="note">"No subscriptions found" is normal for a tenant without an Azure subscription. Use <code>az login --allow-no-subscriptions --tenant &lt;tenant&gt;</code> and pick the tenant-level entry.</p>
+            </div>
+          </li>
+
+          <!-- 3 -->
+          <li class="step" id="s3" data-group="now">
+            <div class="step-head">
+              <span class="step-num">3</span>
+              <div class="step-title">
+                <h3>Check Power BI Desktop and Service settings</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s3" data-step="s3"> Done</label>
+            </div>
+            <div class="step-body">
+              <ol>
+                <li>Desktop &rarr; File &rarr; Options &rarr; Preview features: turn on external tool access through secure local APIs, and the PBIP save option, TMDL and PBIR formats wherever they are still listed. Newer builds have some of them on by default.</li>
+                <li>When the report exists, save it with File &rarr; Save as &rarr; Power BI project into <code>PNL/</code>. Claude only edits PBIP, never <code>.pbix</code>.</li>
+                <li>Service: you need the Contributor, Member or Admin role on the workspace you will publish to.</li>
+                <li>Only on Premium or Fabric capacity: the capacity admin sets the XMLA endpoint to Read Write if models will be edited in the Service.</li>
+              </ol>
+            </div>
+          </li>
+
+          <!-- 4 -->
+          <li class="step" id="s4" data-group="now">
+            <div class="step-head">
+              <span class="step-num">4</span>
+              <div class="step-title">
+                <h3>Verify the agent kit</h3>
+                <div class="meta"><span class="chip claude">Claude</span><span class="chip plain opt">After steps 1&ndash;3</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s4" data-step="s4"> Done</label>
+            </div>
+            <div class="step-body">
+              <p>Paste this into Claude Code. It runs read-only checks: MCP server, skills, CLIs, sign-ins, <code>validate.py</code>. It asks before each smoke test.</p>
+              <div class="code"><span class="lang">Prompt</span><button class="copy" type="button">Copy</button><pre>Run Phase 2 of pbi-fabric-agent-kit/SETUP.md.</pre></div>
+            </div>
+          </li>
+
+          <!-- 5 -->
+          <li class="step" id="s5" data-group="now">
+            <div class="step-head">
+              <span class="step-num">5</span>
+              <div class="step-title">
+                <h3>Start the Git repository</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s5" data-step="s5"> Done</label>
+            </div>
+            <div class="step-body">
+              <p>The repository is <code>git@github.com:rusloc/qbo.git</code>. Claude never runs git in this project. The branch model <code>prod &larr; dev &larr; feat/*</code> is the template default; change it before running this if you want something else.</p>
+              <div class="code"><span class="lang">bash</span><button class="copy" type="button">Copy</button><pre><span class="c"># 1. check SSH access; expect "Hi rusloc! You've successfully authenticated"</span>
+ssh -T git@github.com
+
+<span class="c"># 2. local repo and first commit</span>
+cd "C:/__PBI/QBO"
+git init -b prod
+git remote add origin "git@github.com:rusloc/qbo.git"
+git add -A
+git status   <span class="c"># expect: no .env, no pbi-fabric-agent-kit/, no *.zip, no *.pbix</span>
+git commit -m "chore: scaffold project and install pbi-fabric-agent-kit 2026-09-25"
+
+<span class="c"># 3. what is already on GitHub? no output = empty repo</span>
+git ls-remote --heads origin</pre></div>
+              <p><strong>If the GitHub repo is empty</strong> (step 3 printed nothing):</p>
+              <div class="code"><span class="lang">bash</span><button class="copy" type="button">Copy</button><pre>git push -u origin prod     <span class="c"># first pushed branch becomes the GitHub default</span>
+git switch -c dev
+git push -u origin dev</pre></div>
+              <p><strong>If it already has commits</strong> (for example a README created on GitHub on branch <code>main</code>), merge them in first:</p>
+              <div class="code"><span class="lang">bash</span><button class="copy" type="button">Copy</button><pre>git fetch origin
+git merge "origin/main" --allow-unrelated-histories -m "chore: merge initial GitHub commit"
+git push -u origin prod
+git switch -c dev
+git push -u origin dev</pre></div>
+              <p class="note">Replace <code>main</code> with the branch name step 3 printed. If <code>ssh -T</code> fails, add your public key under GitHub &rarr; Settings &rarr; SSH and GPG keys. You can change the default branch later under the repo's Settings &rarr; General. <code>CLAUDE-template.md</code> is still at the project root and would go into the first commit; keep it or move it before you commit.</p>
+            </div>
+          </li>
+
+          <!-- 6 -->
+          <li class="step" id="s6" data-group="now">
+            <div class="step-head">
+              <span class="step-num">6</span>
+              <div class="step-title">
+                <h3>Install Python 3.12 for the ETL</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s6" data-step="s6"> Done</label>
+            </div>
+            <div class="step-body">
+              <p>The spec fixes Python 3.12. This PC has 3.14 as default and 3.13 for <code>fab</code>. Add 3.12 next to them and give the ETL its own virtual environment.</p>
+              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre>py install 3.12
+cd C:\__PBI\QBO
+py -V:3.12 -m venv etl\.venv
+etl\.venv\Scripts\Activate.ps1
+python --version            <span class="c"># expect Python 3.12.x</span>
+python -m pip install --upgrade pip</pre></div>
+              <p class="note">Leave <code>fab</code> on 3.13: <code>ms-fabric-cli</code> does not install on 3.14. Claude adds the ETL dependencies in Phase 1.</p>
+            </div>
+          </li>
+
+          <!-- 7 -->
+          <li class="step" id="s7" data-group="now">
+            <div class="step-head">
+              <span class="step-num">7</span>
+              <div class="step-title">
+                <h3>Create the Intuit developer app and sandbox company</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s7" data-step="s7"> Done</label>
+            </div>
+            <div class="step-body">
+              <ol>
+                <li>Sign in at <a href="https://developer.intuit.com" target="_blank" rel="noopener">developer.intuit.com</a>, preferably with an account used only for development.</li>
+                <li>Dashboard &rarr; create an app for QuickBooks Online. Select the <strong>Accounting</strong> scope only (<code>com.intuit.quickbooks.accounting</code>). Never add payments scopes (spec &sect;1).</li>
+                <li>Keys &amp; credentials &rarr; <strong>Development</strong>: copy the Client ID and Client Secret into the <code>.env</code> file below.</li>
+                <li>Redirect URIs: add the local callback that <code>qbo_sync auth</code> will listen on. It is fixed in Phase 1, for example <code>http://localhost:8000/callback</code>.</li>
+                <li>Sandbox: open the sandbox company (US; spec asks for QBO Plus) and copy its Company ID. That is the <code>REALM_ID</code>.</li>
+                <li>Use the API Explorer to look at entities. Fixture JSON goes into <code>fixtures/</code> only after realm IDs are removed.</li>
+              </ol>
+              <div class="code"><span class="lang">etl/.env</span><button class="copy" type="button">Copy</button><pre>ENV=sandbox
+CLIENT_ID=
+CLIENT_SECRET=
+REALM_ID=
+DB_URL=</pre></div>
+              <p class="note warn"><strong>Fill this file yourself.</strong> Claude is blocked from reading <code>.env</code> files, and <code>.gitignore</code> keeps them out of Git. Don't request production keys yet: build and test run against the sandbox only.</p>
+            </div>
+          </li>
+
+          <!-- 8 -->
+          <li class="step" id="s8" data-group="now">
+            <div class="step-head">
+              <span class="step-num">8</span>
+              <div class="step-title">
+                <h3>Create the Supabase project and install the CLI</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip plain opt">Now</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s8" data-step="s8"> Done</label>
+            </div>
+            <div class="step-body">
+              <ol>
+                <li>At <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com/dashboard</a>, create a project (for example <code>qbo-pnl-dev</code>). Choose a region near you and your Power BI tenant. Keep the database password in a password manager.</li>
+                <li>Install the CLI with Scoop. Supabase does not support a global npm install.</li>
+              </ol>
+              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre><span class="c"># Scoop (skip the first two lines if you already have it)</span>
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+scoop install supabase
+supabase --version
+
+<span class="c"># link the project folder to the Supabase project</span>
+cd C:\__PBI\QBO
+supabase login
+supabase init                              <span class="c"># creates supabase/ ; answer N to the Deno settings prompt</span>
+supabase link --project-ref &lt;project-ref&gt;</pre></div>
+              <ol start="3">
+                <li>Dashboard &rarr; <strong>Connect</strong> &rarr; <strong>Session pooler</strong>. Copy that URI into <code>DB_URL</code> in <code>etl/.env</code>. The user name has the form <code>postgres.&lt;project-ref&gt;</code>, the port is 5432, and SSL is required.</li>
+              </ol>
+              <p class="note">Use the session pooler, not the direct host: the direct host is IPv6-only unless you buy the IPv4 add-on, and Windows networks are often IPv4-only. Docker is only needed for <code>supabase start</code> (a local stack); this project tests against the remote dev project. Claude writes migrations; <code>supabase db push</code> runs only after you approve it.</p>
+            </div>
+          </li>
+
+          <!-- 9 -->
+          <li class="step" id="s9" data-group="later">
+            <div class="step-head">
+              <span class="step-num">9</span>
+              <div class="step-title">
+                <h3>Connect Power BI Desktop to Supabase</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip wait">After the serve views exist</span><span class="chip wait">ADR-0003</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s9" data-step="s9"> Done</label>
+            </div>
+            <div class="step-body">
+              <ol>
+                <li>Get data &rarr; <strong>PostgreSQL database</strong>. Server: <code>&lt;session-pooler-host&gt;:5432</code>. Database: <code>postgres</code>. Mode: Import.</li>
+                <li>Credentials: Database, with the read-only role that ADR-0003 creates (<code>&lt;role&gt;.&lt;project-ref&gt;</code>). Don't store the <code>postgres</code> admin password in the report.</li>
+                <li>Select the <code>vw_*</code> views only. Server and database become the parameters <code>Server</code> and <code>Database</code>, next to <code>FY_START</code>.</li>
+              </ol>
+              <p class="note">If Desktop reports that the remote certificate is invalid, download the CA certificate from the Supabase dashboard (Database settings &rarr; SSL configuration). Import it under Trusted Root Certification Authorities for the current user (<code>certmgr.msc</code>), then connect again. How the Power BI Service refreshes (cloud connection or gateway) is decided in ADR-0006.</p>
+            </div>
+          </li>
+
+          <!-- 10 -->
+          <li class="step" id="s10" data-group="later">
+            <div class="step-head">
+              <span class="step-num">10</span>
+              <div class="step-title">
+                <h3>Scaffold the React report workspace</h3>
+                <div class="meta"><span class="chip claude">Claude</span><span class="chip you">You</span><span class="chip wait">ADR-0005</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s10" data-step="s10"> Done</label>
+            </div>
+            <div class="step-body">
+              <p>Node 24 is already installed. The plotting library, build tool and hosting are still open. Candidates: Recharts, Apache ECharts, Plotly.js, visx or Bklit UI. If ADR-0005 picks Vite, the scaffold is:</p>
+              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre>cd C:\__PBI\QBO
+npm create vite@latest web -- --template react-ts
+cd web
+npm install
+npm install @supabase/supabase-js</pre></div>
+              <div class="code"><span class="lang">web/.env.local</span><button class="copy" type="button">Copy</button><pre>VITE_SUPABASE_URL=https://&lt;project-ref&gt;.supabase.co
+VITE_SUPABASE_ANON_KEY=&lt;anon or publishable key&gt;</pre></div>
+              <p class="note warn"><strong>Only the anon or publishable key goes into <code>web/</code>.</strong> The <code>service_role</code> key bypasses row-level security and must never reach the browser.</p>
+            </div>
+          </li>
+
+          <!-- 11 -->
+          <li class="step" id="s11" data-group="later">
+            <div class="step-head">
+              <span class="step-num">11</span>
+              <div class="step-title">
+                <h3>Optional: pg-sqldev, a read-only catalog MCP for Claude</h3>
+                <div class="meta"><span class="chip you">You</span><span class="chip claude">Claude</span><span class="chip wait">After step 8 and ADR-0003</span></div>
+              </div>
+              <label class="done-toggle"><input type="checkbox" id="chk-s11" data-step="s11"> Done</label>
+            </div>
+            <div class="step-body">
+              <p>Gives Claude table, column and index facts from Supabase without reading data rows. The source is in <code>_mcp/pg-sqldev</code>. The tests run offline:</p>
+              <div class="code"><span class="lang">PowerShell</span><button class="copy" type="button">Copy</button><pre>cd C:\__PBI\QBO\_mcp\pg-sqldev
+npm ci
+npm test</pre></div>
+              <ol>
+                <li>Create a dedicated read-only database role with <code>usage</code> and <code>select</code> grants on the warehouse schemas.</li>
+                <li>Copy <code>.env.example</code> to <code>.env</code> in that folder and fill <code>PGHOST</code> (session pooler host), <code>PGPORT=5432</code>, <code>PGDATABASE=postgres</code>, <code>PGUSER=&lt;role&gt;.&lt;project-ref&gt;</code>, <code>PGPASSWORD</code> and <code>PG_SCHEMAS</code>.</li>
+                <li>Run <code>node scripts/probe.js</code> once, then <code>node test/smoke.js</code>. When the smoke test passes, ask Claude to register the server in <code>.mcp.json</code>.</li>
+              </ol>
+              <p class="note">Set <code>PG_SCHEMAS</code> explicitly: its default is the schema list of the project the kit came from. The README describes Azure Cosmos DB for PostgreSQL; the steps are the same on Supabase. After <code>npm ci</code>, <code>validate.py</code> reports third-party files under <code>node_modules</code>. That is a known kit issue.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Decisions -->
+      <section id="decisions">
+        <div class="section-head">
+          <span class="eyebrow">Open decisions</span>
+          <h2>What still needs an ADR</h2>
+          <p class="muted">Listed in <code>.docs/ADD/tech-stack.md</code>. Claude won't build against any of these until the ADR is accepted.</p>
+        </div>
+        <div class="decisions">
+          <div class="decision"><span class="id">ADR-0002</span><strong>Transforms</strong><span class="sub">Plain SQL or dbt-core for raw &rarr; stg &rarr; mart.</span></div>
+          <div class="decision"><span class="id">ADR-0003</span><strong>Schemas, API exposure, roles</strong><span class="sub">Which schemas the Data API sees; ETL writer and Power BI reader roles. Blocks steps 9 and 11.</span></div>
+          <div class="decision"><span class="id">ADR-0004</span><strong>Where qbo_sync runs</strong><span class="sub">The daily CDC run: GitHub Actions, an always-on machine, or something else.</span></div>
+          <div class="decision"><span class="id">ADR-0005</span><strong>React report stack</strong><span class="sub">Plotting library, build tool, hosting. Blocks step 10.</span></div>
+          <div class="decision"><span class="id">ADR-0006</span><strong>Power BI Service</strong><span class="sub">Refresh path (cloud connection or gateway) and deploy tool.</span></div>
+          <div class="decision"><span class="id">ADR-0007</span><strong>Token vault</strong><span class="sub">Where the rotating QBO refresh token is stored and locked.</span></div>
+        </div>
+      </section>
+
+      <!-- Maintenance -->
+      <section id="maint">
+        <div class="section-head">
+          <span class="eyebrow">Reference</span>
+          <h2>Maintenance and fixes</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Task</th><th>Command</th></tr></thead>
+            <tbody>
+              <tr><td>Refresh the Microsoft skills</td><td><code>powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\sync-pbi-fabric-skills.ps1</code></td></tr>
+              <tr><td>Freeze the MCP server version</td><td>In <code>.mcp.json</code>, replace <code>@latest</code> with a version, for example <code>0.5.0-beta.15</code></td></tr>
+              <tr><td>Make the MCP server read-only</td><td>Add <code>"--readonly"</code> as the last arg in <code>.mcp.json</code>, then reconnect with <code>/mcp</code></td></tr>
+              <tr><td>Update the report CLIs</td><td><code>npm update -g @microsoft/powerbi-report-authoring-cli @microsoft/powerbi-desktop-bridge-cli</code></td></tr>
+              <tr><td>Update the Fabric CLI</td><td><code>py -V:3.13 -m pip install --upgrade ms-fabric-cli</code></td></tr>
+              <tr><td>Validate the repo</td><td><code>py -V:3.13 _scripts/validate.py</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Symptom</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>A newly installed tool is "not found"</td><td>Claude Code inherits PATH when VS Code starts. Close every VS Code window and reopen.</td></tr>
+              <tr><td>MCP server "failed" or "connection closed"</td><td>In <code>.mcp.json</code>, <code>command</code> must be <code>"cmd"</code> with <code>"/c"</code> as the first arg. If <code>/c</code> became <code>C:/</code>, the server was registered through Git Bash; edit the file by hand.</td></tr>
+              <tr><td>Model reads work, writes fail in the Service</td><td>Build permission instead of Write, XMLA not Read Write, or workspace role too low (step 3).</td></tr>
+              <tr><td><code>powerbi-desktop reload</code> lost work</td><td>It discards unsaved Desktop edits. Run <code>powerbi-desktop status</code> first and never reload while <code>hasUnsavedChanges</code> is true.</td></tr>
+              <tr><td>Supabase connection times out from Windows</td><td>You are on the IPv6-only direct host. Use the session pooler URI (step 8).</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <span>QBO P&amp;L &middot; project rules in <code>CLAUDE.md</code> &middot; kit runbook in <code>pbi-fabric-agent-kit/SETUP.md</code></span>
+    <span>pbi-fabric-agent-kit 2026-09-25</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var KEY = "qbo-pnl-setup-guide:v1";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type="checkbox"][data-step]'));
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable: ticks last for this visit only */ }
+  }
+
+  function render() {
+    var now = 0, nowTotal = 0, later = 0, laterTotal = 0;
+    boxes.forEach(function (box) {
+      var id = box.getAttribute("data-step");
+      var step = document.getElementById(id);
+      var done = !!state[id];
+      box.checked = done;
+      step.classList.toggle("is-done", done);
+      var link = document.querySelector('.toc a[data-step="' + id + '"]');
+      if (link) link.classList.toggle("is-done", done);
+      if (step.getAttribute("data-group") === "now") { nowTotal++; if (done) now++; }
+      else { laterTotal++; if (done) later++; }
+    });
+    document.getElementById("t-now").textContent = now + " / " + nowTotal;
+    document.getElementById("t-later").textContent = later + " / " + laterTotal;
+    document.getElementById("t-all").textContent = (now + later) + " / " + (nowTotal + laterTotal);
+  }
+
+  boxes.forEach(function (box) {
+    box.addEventListener("change", function () {
+      state[box.getAttribute("data-step")] = box.checked;
+      save();
+      render();
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".copy"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.parentNode.querySelector("pre");
+      var text = pre.innerText.replace(/\s+$/, "");
+      function flash(label) {
+        btn.textContent = label;
+        setTimeout(function () { btn.textContent = "Copy"; }, 1600);
+      }
+      function selectFallback() {
+        var range = document.createRange();
+        range.selectNodeContents(pre);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        flash("Selected: press Ctrl+C");
+      }
+      try {
+        navigator.clipboard.writeText(text).then(function () { flash("Copied"); }, selectFallback);
+      } catch (e) { selectFallback(); }
+    });
+  });
+
+  render();
+})();
+</script>

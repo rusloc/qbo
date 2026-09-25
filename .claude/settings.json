@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "Task",
+      "Skill",
+      "TodoWrite",
+
+      "Bash",
+      "PowerShell"
+    ],
+    "deny": [
+      "Read(.env*)",
+      "Read(**/.env*)",
+      "Bash(cat .env*)",
+      "Bash(head .env*)",
+      "Bash(tail .env*)",
+      "Bash(type .env*)",
+      "PowerShell(Get-Content .env*)",
+      "PowerShell(cat .env*)",
+
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git reset*)",
+      "Bash(git checkout*)",
+      "Bash(git restore*)",
+      "Bash(git stash*)",
+      "Bash(git rebase*)",
+      "Bash(git merge*)",
+      "PowerShell(git add*)",
+      "PowerShell(git commit*)",
+      "PowerShell(git push*)",
+      "PowerShell(git reset*)",
+      "PowerShell(git checkout*)",
+      "PowerShell(git restore*)",
+      "PowerShell(git stash*)",
+      "PowerShell(git rebase*)",
+      "PowerShell(git merge*)",
+
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r *)",
+      "Bash(rm -f /*)",
+      "Bash(sudo *)",
+      "PowerShell(Remove-Item -Recurse*)",
+
+      "Bash(vercel rm *)",
+      "Bash(vercel remove *)",
+      "Bash(vercel env rm *)",
+      "Bash(vercel env add *)",
+      "Bash(vercel --prod*)",
+      "Bash(vercel deploy --prod*)",
+      "PowerShell(vercel rm *)",
+      "PowerShell(vercel env rm *)",
+      "PowerShell(vercel --prod*)",
+
+      "Bash(gh repo delete*)",
+      "Bash(gh secret *)",
+      "Bash(npm publish*)",
+      "Bash(pnpm publish*)",
+      "PowerShell(gh repo delete*)",
+      "PowerShell(gh secret *)",
+      "PowerShell(npm publish*)",
+      "PowerShell(pnpm publish*)"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+# pbi-fabric-agent-kit defaults. Merge with any existing rules; nothing here un-ignores anything.
+
+# PBIX files are backups, never source
+*.pbix
+# Local model data copy (full data!) - never commit
+**/.pbi/cache.abf
+**/cache.abf
+
+# Rule #1 pre-edit copies stay local
+__backup__/
+*.bak
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local MCP servers: dependencies and cached catalog facts (may hold real data values)
+_mcp/*/node_modules/
+_mcp/*/.cache/
+
+# Mail synced from Outlook is data, not source
+.mail/
+
+# --- QBO P&L project additions ---
+# Python (etl/)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node (web/, _mcp/)
+node_modules/
+web/dist/
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# Agent kit source: the installed copy lives in .claude/, scripts/, _scripts/, _mcp/
+pbi-fabric-agent-kit/
+pbi-fabric-agent-kit-*.zip

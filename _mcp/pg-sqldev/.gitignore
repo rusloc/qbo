@@ -1,0 +1,8 @@
+# Secrets, local cache and dependencies never leave this machine.
+# The root .gitignore runs in whitelist mode and already ignores this whole folder;
+# these lines keep the three below ignored even if _mcp/ is whitelisted later (decision D2).
+.env
+.env.*
+!.env.example
+.cache/
+node_modules/
