@@ -206,12 +206,20 @@ These rules are load-bearing. They override convenience, speed, and any implicit
 - Docs and scripts: `kebab-case.{md,ps1,sql}`. Exceptions where the ecosystem or the spec rules: Python modules `snake_case.py` (spec names `qbo_sync`, `generate_synthetic.py`, `seed_sandbox.py`); React components `PascalCase.tsx`, hooks `useCamelCase.ts`; Supabase migrations as the CLI names them (`<timestamp>_<name>.sql`); PBIP folders exactly as Desktop writes them
 - Env vars / parameters: `SCREAMING_SNAKE_CASE`; client-safe values explicitly prefixed for the web build tool (`VITE_` if Vite — see ADR-0005)
 - DB objects: `snake_case`, **names exactly as spec §2** (`raw_entity`, `stg_*`, `dim_*` singular, `fact_*`, `vw_*`, `sync_state`, `qa_reports_snapshot`) — the spec's "create exactly" beats the generic plural-table rule
-- Branches: `{type}/{short-description}` (`feat/`, `fix/`, `chore/`)
+- Branches: `prod` and `dev` only — no feature branches. Commit messages keep the conventional types (`feat:`, `fix:`, `chore:`, `docs:`)
 
 ### Branching & CI
 
-- `prod` (production) ← `dev` ← `feat/*` — created 2026-09-25; `prod` is the GitHub default branch, day-to-day work branches off `dev`
-- Preview/staging deploys on PRs where the platform supports it (web report)
+- `prod` (production) ← `dev` — amended by USER 2026-09-25: **no feature branches**. All work is committed on `dev`; `dev` is merged into `prod` regularly. `prod` receives merges from `dev` only, never direct commits. `prod` is the GitHub default branch
+- Merge `dev` → `prod` at points where the checks are green (tests, `validate.py`, phase gates). Suggest a merge when a checkpoint is reached; the USER runs it. `--ff-only` fails loudly if `prod` ever got a commit that is not on `dev`:
+```bash
+  git switch prod
+  git pull
+  git merge --ff-only dev
+  git push
+  git switch dev
+```
+- Preview deploys from `dev`, production deploys from `prod`, where the platform supports it (web report)
 - CI: lint (ruff / eslint) → typecheck (TS strict) → build → test (pytest with fixtures, one test per `DetailType`) → SQL tests (validation V1–V3 on a disposable DB) → PBIP validation
 - Migration gate: every PR touching `supabase/migrations/` must apply cleanly on a fresh database
 

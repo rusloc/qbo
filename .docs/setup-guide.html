@@ -444,7 +444,7 @@ fab auth status</pre></div>
               <label class="done-toggle"><input type="checkbox" id="chk-s5" data-step="s5"> Done</label>
             </div>
             <div class="step-body">
-              <p>The repository is <code>git@github.com:rusloc/qbo.git</code>. Claude never runs git in this project. The branch model <code>prod &larr; dev &larr; feat/*</code> is the template default; change it before running this if you want something else.</p>
+              <p>The repository is <code>git@github.com:rusloc/qbo.git</code>. Claude never runs git in this project. The branch model is <code>prod &larr; dev</code>: all work is committed on <code>dev</code> and merged into <code>prod</code> regularly. There are no feature branches.</p>
               <div class="code"><span class="lang">bash</span><button class="copy" type="button">Copy</button><pre><span class="c"># 1. check SSH access; expect "Hi rusloc! You've successfully authenticated"</span>
 ssh -T git@github.com
 
