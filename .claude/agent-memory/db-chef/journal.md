@@ -1,0 +1,3 @@
+# db-chef journal (append-only; not auto-loaded)
+
+2026-09-25 21:45 — write F-05 M1–M5 migration files (schema qbo, roles, raw/control, dims, facts, Vault token functions); files only, not applied — new: DEC-001, LSN-001, ANTI-001; template DEC-001.vault-advisory-lock.sql — touched: decisions.md, lessons.md, antipatterns.md, coverage-map.md — files: supabase/migrations/20260925213800_qbo_init_schema_and_roles.sql, 20260925213900_qbo_raw_and_control.sql, 20260925214000_qbo_dimensions.sql, 20260925214100_qbo_facts.sql, 20260925214200_qbo_token_vault.sql — proposed project anti-pattern candidate: "silent row loss through nullable / unconstrained filter keys" (ANTI-001) for the main session's CAND-NNN list

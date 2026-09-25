@@ -17,9 +17,10 @@ Supabase has two places that could be called "env vars":
 
 - The refresh token lives in Vault as the secret `qbo_refresh_token` (the `qbo_` prefix follows ADR-0008).
 - `qbo_etl` gets no direct Vault access. Two `security definer` functions in `qbo` (owner `postgres`, `set search_path = ''`, `execute` granted to `qbo_etl` only):
-  - `qbo.refresh_token_lock()` → `text`: locks the secret's row and returns the current token. It must be called inside the ETL's transaction.
-  - `qbo.refresh_token_store(text)`: writes the rotated token.
-- ETL flow: `begin` → `refresh_token_lock()` → POST the refresh to Intuit → `refresh_token_store(new)` → `commit` → then use the access token. The row lock makes refreshes single-flight.
+  - `qbo.refresh_token_lock()` → `text`: takes a transaction-scoped advisory lock (`pg_advisory_xact_lock(hashtext('qbo_refresh_token'))`) and returns the current token, or null before the first `auth`. It must be called inside the ETL's transaction.
+  - `qbo.refresh_token_store(text)`: takes the same lock and writes the rotated token (creates the secret on first use; rejects an empty token).
+- ETL flow: `begin` → `refresh_token_lock()` → POST the refresh to Intuit → `refresh_token_store(new)` → `commit` → then use the access token. The advisory lock makes refreshes single-flight; commit or rollback releases it.
+- **Amended 2026-09-25 (M5 build):** the first draft said "locks the secret's row". That is impossible on Supabase: `postgres` has no `UPDATE` privilege on `vault.secrets` (checked on `vosk.dev`), and every row-locking clause needs it. The advisory lock gives the same single-flight guarantee without touching `vault.*`.
 - The access token (1 h TTL) stays in memory only.
 - `qbo_sync auth` stores the first token through `refresh_token_store`.
 - `CLIENT_ID`, `CLIENT_SECRET` and `REALM_ID` do not rotate. They stay in env: `.env` locally, CI / runner secrets later (ADR-0004).

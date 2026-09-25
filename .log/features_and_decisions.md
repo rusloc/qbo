@@ -16,9 +16,14 @@
 - 2026-09-25 #decision Git commit messages never reference Anthropic, Claude or Claude Code (CLAUDE.md, USER)
 - 2026-09-25 #decision Sub-agents: `bip` = PBI model & report + PBI Service; `db-chef` = schema `qbo` (`supabase/` migrations, validation SQL); dbt ownership decided when the data-engineer agent lands; no web report agent for now. Delegated agents don't write `.log/` (main session logs); chef's memory candidates use `SCAND-NNN` (project keeps `CAND-NNN` / `AP-NNN`) — roster ADR pending (ADR-0009)
 - 2026-09-25 #decision `data-engineer-ferry` joins as the ETL + dbt agent and owns all dbt work (`dbt/`: `stg_*` / `vw_*` models, fills of migration-owned `dim_*` / `fact_*`, dbt tests) plus `etl/`, `fixtures/`, `demo_data/`; `db-chef` keeps the migrations; shared PBI / web metrics (serve-view columns) move to the ETL + dbt lane — ADR-0009 (accepted)
+- 2026-09-25 #decision F-05 changes vs spec §2 approved, plus a `check` on `dim_account.stmt_section` (6 values); migrations go straight to `vosk.dev`, no fresh-DB check for now (option D)
+- 2026-09-25 #decision Demo data (Track C) = QBO-shaped JSON into `raw_entity`, not CSV (CLAUDE.md spec delta 3)
+- 2026-09-25 #decision Daily `qbo_sync cdc` via Windows Task Scheduler on the USER's PC — ADR-0004 (accepted)
+- 2026-09-25 #decision ETL stack: DuckDB first, pandas fallback, no Polars; psycopg 3.3.6 (ETL, passed the Smart App Control test) + psycopg2 2.9.10 (dbt); `etl/.venv` + pinned `requirements.txt`; ferry aligned (dax-sql-formatter, no `execute_sql`, dead tools removed, `PCAND-NNN`) — ADR-0009
+- 2026-09-25 #decision Power BI (Phase 4) deferred: focus on QBO, ETL, DB schema and a backend filled with data (USER)
+- 2026-09-25 #decision Vault token single-flight = transaction-scoped advisory lock, not a row lock (`postgres` has no `UPDATE` on `vault.secrets`) — ADR-0007 amended
 
 ### Open ADR candidates
-- ADR-0004 — where and how `qbo_sync cdc` runs daily
 - ADR-0005 — React report: plotting library, build tool, hosting
 - ADR-0006 — Power BI Service: refresh path (cloud connection vs gateway) and deploy tool
 
@@ -26,10 +31,10 @@
 | ID | Feature | Spec | State |
 |---|---|---|---|
 | F-01 | Sandbox company + JSON fixtures per entity and `DetailType` | §4 P0 Track A | planned |
-| F-02 | Synthetic demo dataset (`generate_synthetic.py`, 24 months) | §4 P0 Track C | planned |
+| F-02 | Synthetic demo dataset (`generate_synthetic.py`, 24 months; QBO-shaped JSON into `raw_entity`) | §4 P0 Track C | planned |
 | F-03 | Sandbox seeding (`seed_sandbox.py`) | §4 P0 Track B | planned |
 | F-04 | Extractor `qbo_sync` (auth, backfill, cdc, status) | §4 P1 | planned |
-| F-05 | Warehouse DDL + transforms raw → stg → mart → serve | §2, §3, §4 P2 | planned |
+| F-05 | Warehouse DDL + transforms raw → stg → mart → serve | §2, §3, §4 P2 | in progress (DDL M1–M5 applied to `vosk.dev` 2026-09-25; dbt transforms next) |
 | F-06 | Validation suite V1–V3 | §5, §4 P3 | planned |
-| F-07 | Power BI single-page P&L (PBIP → .pbit + demo .pbix) | §6, §7, §4 P4 | planned |
+| F-07 | Power BI single-page P&L (PBIP → .pbit + demo .pbix) | §6, §7, §4 P4 | planned (deferred by USER 2026-09-25) |
 | F-08 | React online report | USER 2026-09-25 | planned (scope to be specified) |

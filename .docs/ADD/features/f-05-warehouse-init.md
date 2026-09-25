@@ -1,4 +1,4 @@
-> **DRAFT — projection state.** Migration plan for review. Nothing here has been applied to `vosk.dev` yet. There is no local database: each migration is applied straight to `vosk.dev`, one at a time, after USER approval, and verified there (USER 2026-09-25).
+> **APPLIED 2026-09-25.** M1–M5 are live on `vosk.dev` (files in `supabase/migrations/`, which are now the source of truth; this page stays as the design record). There is no local database: each migration was applied straight to `vosk.dev`, one at a time, after USER approval, and verified there.
 
 # F-05 · Warehouse init — migration plan (schema `qbo`)
 
@@ -196,9 +196,11 @@ grant select, insert, update, delete
 
 ### M5 · `qbo_token_vault`
 
-ADR-0007 is accepted; the SQL is written together with the M1–M4 files. Signatures:
-- `qbo.refresh_token_lock() returns text`: locks and returns `qbo_refresh_token`
-- `qbo.refresh_token_store(p_token text) returns void`: rotates it
+ADR-0007 is accepted. Signatures (as built):
+- `qbo.refresh_token_lock() returns text`: takes the transaction-scoped advisory lock and returns `qbo_refresh_token` (null before the first `auth`)
+- `qbo.refresh_token_store(p_token text) returns void`: same lock; rotates it, or creates it on first use; rejects an empty token
+
+Advisory lock, not a row lock: `postgres` has no `UPDATE` on `vault.secrets` (ADR-0007 amendment).
 
 Both are `security definer`, owned by `postgres`, with `set search_path = ''` and `execute` granted to `qbo_etl` only.
 
@@ -211,7 +213,7 @@ alter role qbo_reader with login password '<from password manager>';
 
 Connection user through the session pooler: `qbo_etl.<project-ref>` / `qbo_reader.<project-ref>`.
 
-## Changes vs spec §2 (need USER approval)
+## Changes vs spec §2 (approved by USER 2026-09-25, with the `stmt_section` check)
 
 | Change | Why |
 |---|---|
@@ -222,7 +224,7 @@ Connection user through the session pooler: `qbo_etl.<project-ref>` / `qbo_reade
 | `dim_date.d not null unique` | V1 joins facts on `d` |
 | `fact_budget`: surrogate `budget_key` + `unique nulls not distinct`; FK on `class_key`; `amount not null` | spec issue 1: the spec's PK includes the nullable `class_key`, which Postgres rejects |
 
-**Suggested, not included (your call):** a `check` constraint on `stmt_section` values (`Revenue`, `COGS`, `OpEx`, `OtherInc`, `OtherExp`, `Tax`). A typo in the consultant mapping would otherwise drop rows from the DAX measures without an error.
+**Included (USER 2026-09-25):** a `check` constraint on `stmt_section` values (`Revenue`, `COGS`, `OpEx`, `OtherInc`, `OtherExp`, `Tax`). A typo in the consultant mapping would otherwise drop rows from the DAX measures without an error.
 
 ## dbt fill pattern (ADR-0002)
 
@@ -244,9 +246,9 @@ models:
 
 ## Open items
 
-1. USER approval of the changes vs spec §2 and of the `stmt_section` check.
+1. ~~USER approval of the changes vs spec §2 and of the `stmt_section` check.~~ Approved 2026-09-25, check included.
 2. Budget source for real clients (spec issue 3). `fact_budget` is created empty.
-3. Staging shapes (spec issue 2): `stg_*` are dbt views over `raw_entity`. Recommendation: Track C writes QBO-shaped JSON into `raw_entity`, so demo data runs through the same pipeline.
+3. ~~Staging shapes (spec issue 2).~~ Decided 2026-09-25: `stg_*` are dbt views over `raw_entity`, and Track C writes QBO-shaped JSON into `raw_entity` (CLAUDE.md spec delta 3).
 4. `FY_START` lives in two places (dbt var for `dim_date`, Power BI parameter). Settle in Phase 4 together with the `TOTALYTD` issue.
 
 ## Verification after apply (read-only)

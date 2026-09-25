@@ -3,6 +3,8 @@
 # Install: etl/.venv/Scripts/python -m pip install -r etl/requirements.txt
 dbt-core==1.12.5
 dbt-postgres==1.11.0
-psycopg2-binary==2.9.10  # 2.9.13's _psycopg .pyd is blocked by Windows Smart App Control; 2.9.10 loads
+psycopg2-binary==2.9.10  # dbt-postgres driver. 2.9.13's _psycopg .pyd is blocked by Windows Smart App Control; 2.9.10 loads
+psycopg[binary]==3.3.6   # ETL driver (qbo_sync). 3.3.6 binary passed the Smart App Control test 2026-09-25
+duckdb==1.5.5            # local data work, first choice (pandas = fallback, not installed); DECIMAL is exact. Passed the SAC test 2026-09-25
 pytest==9.1.1
 ruff==0.16.9

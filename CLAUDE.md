@@ -63,6 +63,7 @@ The kit's `context/` folder concept maps to this project as: business truth = sp
 **Spec ↔ project deltas (USER decisions 2026-09-25, not yet folded into the spec):**
 1. Warehouse = **Supabase Postgres only**. Spec §0 says "PostgreSQL or Azure SQL (parameterize; support both)" — the Azure SQL path is dropped (ADR-0001).
 2. A **React online report** (third-party plotting library) is a second consumer of the serve layer. Spec §0 lists only the Power BI template — a spec amendment is pending.
+3. **Demo data (Track C)** is QBO-shaped JSON loaded into `raw_entity`, so it runs through the same dbt path as real data. Spec §4 says CSVs "matching §2 staging shapes"; the demo `.pbix` therefore reads the serve views filled with demo data, not CSVs.
 
 Where this file / an accepted ADR and the spec disagree, this file and the ADR win. Flag every other spec conflict you find (spec §9.7) — don't resolve it silently.
 
@@ -239,7 +240,7 @@ en-US, USD — UI + content locked together at MVP. Single currency by design (m
 
 ## Data platform conventions (ETL + Supabase)
 
-**Stack:** Python 3.12 · QBO Accounting API v3 (`minorversion=75`) · Supabase Postgres · Supabase CLI migrations · transforms in dbt-core + dbt-postgres, DDL / init code in migrations (ADR-0002) · pytest
+**Stack:** Python 3.12 · QBO Accounting API v3 (`minorversion=75`) · Supabase Postgres · Supabase CLI migrations · transforms in dbt-core + dbt-postgres, DDL / init code in migrations (ADR-0002) · DuckDB for local data work (pandas fallback, no Polars) · psycopg 3 for the ETL, psycopg2 for dbt · pytest · daily run via Windows Task Scheduler (ADR-0004) · env: `etl/.venv` + pinned `etl/requirements.txt` (no `uv` / `pyproject.toml`)
 
 **Structure:**
 ```
