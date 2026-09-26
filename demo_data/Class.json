@@ -1,0 +1,5 @@
+[
+{"Name":"Corporate","SubClass":false,"FullyQualifiedName":"Corporate","Active":true,"domain":"QBO","sparse":false,"Id":"5000000000100000001","SyncToken":"0","MetaData":{"CreateTime":"2024-08-26T12:01:00-07:00","LastUpdatedTime":"2024-08-26T12:01:00-07:00"}},
+{"Name":"Wholesale","SubClass":false,"FullyQualifiedName":"Wholesale","Active":true,"domain":"QBO","sparse":false,"Id":"5000000000100000002","SyncToken":"0","MetaData":{"CreateTime":"2024-08-26T12:02:00-07:00","LastUpdatedTime":"2024-08-26T12:02:00-07:00"}},
+{"Name":"Online","SubClass":false,"FullyQualifiedName":"Online","Active":true,"domain":"QBO","sparse":false,"Id":"5000000000100000003","SyncToken":"0","MetaData":{"CreateTime":"2024-08-26T12:03:00-07:00","LastUpdatedTime":"2024-08-26T12:03:00-07:00"}}
+]

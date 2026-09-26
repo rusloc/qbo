@@ -1,0 +1,43 @@
+{
+  "QueryResponse": {
+    "Budget": [
+      {
+        "Name": "FY2026 P&L budget",
+        "StartDate": "2026-01-01",
+        "EndDate": "2026-12-31",
+        "BudgetType": "ProfitAndLoss",
+        "BudgetEntryType": "Monthly",
+        "Active": true,
+        "BudgetDetail": [
+          {
+            "BudgetDate": "2026-01-01",
+            "Amount": 2500.00,
+            "AccountRef": {"value": "9501", "name": "Advertising & Marketing"}
+          },
+          {
+            "BudgetDate": "2026-02-01",
+            "Amount": 2500.00,
+            "AccountRef": {"value": "9501", "name": "Advertising & Marketing"}
+          },
+          {
+            "BudgetDate": "2026-01-01",
+            "Amount": 4100.50,
+            "AccountRef": {"value": "9502", "name": "Rent & Lease"},
+            "ClassRef": {"value": "9401", "name": "Services"}
+          }
+        ],
+        "domain": "QBO",
+        "sparse": false,
+        "Id": "9601",
+        "SyncToken": "0",
+        "MetaData": {
+          "CreateTime": "2026-01-05T10:00:00-08:00",
+          "LastUpdatedTime": "2026-01-05T10:00:00-08:00"
+        }
+      }
+    ],
+    "startPosition": 1,
+    "maxResults": 1
+  },
+  "time": "2026-09-26T08:00:05.000-07:00"
+}

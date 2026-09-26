@@ -1,0 +1,164 @@
+version: 2
+
+models:
+  - name: stg_entity_latest
+    description: >
+      Latest version per (entity_type, qbo_id) of qbo.raw_entity. is_deleted = newest version is a
+      CDC delete marker (payload keeps the last full body); is_voided = QBO void shape.
+    data_tests:
+      - unique:
+          column_name: "entity_type || '|' || qbo_id"
+    columns:
+      - name: entity_type
+        data_tests: [not_null]
+      - name: qbo_id
+        data_tests: [not_null]
+      - name: payload
+        data_tests: [not_null]
+
+  - name: stg_account
+    columns:
+      - name: qbo_id
+        data_tests: [unique, not_null]
+      - name: classification
+        description: Drives the sign rule (spec 3.2); a null would null amount_signed.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [Asset, Liability, Equity, Revenue, Expense]
+
+  - name: stg_item
+    columns:
+      - name: qbo_id
+        data_tests: [unique, not_null]
+
+  - name: stg_customer
+    columns:
+      - name: qbo_id
+        data_tests: [unique, not_null]
+
+  - name: stg_vendor
+    columns:
+      - name: qbo_id
+        data_tests: [unique, not_null]
+
+  - name: stg_class
+    columns:
+      - name: qbo_id
+        data_tests: [unique, not_null]
+
+  - name: stg_txn_line
+    description: >
+      Spec 3.1 line explosion + 3.2 sign normalization. One row per Line element of Invoice,
+      SalesReceipt, CreditMemo, RefundReceipt, Bill, Purchase and JournalEntry; is_posting marks
+      the lines that reach fact_gl.
+    data_tests:
+      - unique:
+          column_name: "txn_type || '|' || txn_qbo_id || '|' || line_num"
+    columns:
+      - name: detail_type
+        description: Unknown types (GroupLineDetail bundles, TDSLineDetail, ...) fail here instead of vanishing.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - SalesItemLineDetail
+                  - AccountBasedExpenseLineDetail
+                  - ItemBasedExpenseLineDetail
+                  - JournalEntryLineDetail
+                  - DiscountLineDetail
+                  - SubTotalLineDetail
+                  - DescriptionOnly
+      - name: txn_date
+        data_tests:
+          - not_null:
+              config:
+                where: "is_posting"
+      - name: account_qbo_id
+        description: Every posting line must resolve to a landed account (gate P2, zero orphans).
+        data_tests:
+          - not_null:
+              config:
+                where: "is_posting"
+          - relationships:
+              arguments:
+                to: ref('stg_account')
+                field: qbo_id
+              config:
+                where: "is_posting"
+      - name: posting_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Debit, Credit]
+              config:
+                where: "is_posting"
+          - not_null:
+              config:
+                where: "is_posting"
+      - name: amount_signed
+        data_tests:
+          - not_null:
+              config:
+                where: "is_posting"
+      - name: customer_qbo_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_customer')
+                field: qbo_id
+              config:
+                severity: warn
+      - name: vendor_qbo_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_vendor')
+                field: qbo_id
+              config:
+                severity: warn
+      - name: class_qbo_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_class')
+                field: qbo_id
+              config:
+                severity: warn
+
+  - name: stg_budget_line
+    description: QBO Budget entity, one row per BudgetDetail entry.
+    columns:
+      - name: budget_month
+        data_tests: [not_null]
+      - name: amount
+        data_tests: [not_null]
+      - name: budget_entry_type
+        description: fact_budget is monthly; a Quarterly / Yearly budget would need a spreading rule.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Monthly]
+              config:
+                where: "is_active and budget_type = 'ProfitAndLoss'"
+      - name: account_qbo_id
+        data_tests:
+          - not_null:
+              config:
+                where: "is_active and budget_type = 'ProfitAndLoss'"
+          - relationships:
+              arguments:
+                to: ref('stg_account')
+                field: qbo_id
+              config:
+                where: "is_active and budget_type = 'ProfitAndLoss'"
+      - name: class_qbo_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_class')
+                field: qbo_id
+              config:
+                severity: warn

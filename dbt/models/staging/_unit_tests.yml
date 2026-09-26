@@ -1,0 +1,356 @@
+version: 2
+
+# Gate P2 (spec 3.1): one unit test per DetailType, plus the spec 3.2 sign flips and the
+# delete / void flags. Fixtures are QBO-shaped JSON (the demo generator uses the same shapes).
+# Accounts used: 21 Product Sales (Revenue), 49 Discounts Given (Revenue, contra),
+# 31 Product Costs (Expense, COGS), 61 Wages (Expense), 62 Rent (Expense),
+# 1 Checking (Asset), 70 Interest Earned (Revenue), 22 Legacy Sales (Revenue, an ItemAccountRef target).
+
+unit_tests:
+  - name: latest_version_delete_marker_and_void
+    description: >
+      Newest synced_at wins. A CDC delete marker keeps the last full body and sets is_deleted.
+      A QBO void (PrivateNote "Voided", TotalAmt 0) sets is_voided. Types the spec does not
+      transform yet (VendorCredit) pass through untouched.
+    model: stg_entity_latest
+    given:
+      - input: source('qbo', 'raw_entity')
+        rows:
+          - {entity_type: Invoice, qbo_id: "201", synced_at: "2026-09-01 00:00:00+00", payload: '{"Id": "201", "TotalAmt": 100.00, "DocNumber": "old"}'}
+          - {entity_type: Invoice, qbo_id: "201", synced_at: "2026-09-02 00:00:00+00", payload: '{"Id": "201", "TotalAmt": 120.00, "DocNumber": "new"}'}
+          - {entity_type: Invoice, qbo_id: "202", synced_at: "2026-09-01 00:00:00+00", payload: '{"Id": "202", "TotalAmt": 50.00}'}
+          - {entity_type: Invoice, qbo_id: "202", synced_at: "2026-09-03 00:00:00+00", payload: '{"domain": "QBO", "status": "Deleted", "Id": "202"}'}
+          - {entity_type: Invoice, qbo_id: "203", synced_at: "2026-09-01 00:00:00+00", payload: '{"Id": "203", "TotalAmt": 0.00, "PrivateNote": "Voided"}'}
+          - {entity_type: VendorCredit, qbo_id: "204", synced_at: "2026-09-01 00:00:00+00", payload: '{"Id": "204", "TotalAmt": 10.00}'}
+    expect:
+      rows:
+        - {entity_type: Invoice, qbo_id: "201", is_deleted: false, is_voided: false, synced_at: "2026-09-02 00:00:00+00", payload: '{"Id": "201", "TotalAmt": 120.00, "DocNumber": "new"}'}
+        - {entity_type: Invoice, qbo_id: "202", is_deleted: true, is_voided: false, synced_at: "2026-09-03 00:00:00+00", payload: '{"Id": "202", "TotalAmt": 50.00}'}
+        - {entity_type: Invoice, qbo_id: "203", is_deleted: false, is_voided: true, synced_at: "2026-09-01 00:00:00+00", payload: '{"Id": "203", "TotalAmt": 0.00, "PrivateNote": "Voided"}'}
+        - {entity_type: VendorCredit, qbo_id: "204", is_deleted: false, is_voided: false, synced_at: "2026-09-01 00:00:00+00", payload: '{"Id": "204", "TotalAmt": 10.00}'}
+
+  - name: dt_sales_item_line_detail
+    description: >
+      SalesItemLineDetail posts to the line's ItemAccountRef (the account QBO posted to) when
+      present, else to the item's current IncomeAccountRef (USER 2026-09-26). Line 1 carries an
+      ItemAccountRef (22) that differs from the item's current account (21); line 2 has none.
+      An invoice credits Revenue, so both amounts are positive.
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: Invoice
+            qbo_id: "101"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-11-03", "CustomerRef": {"value": "7"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Description": "Classic Gift Box", "Amount": 90.00,
+               "DetailType": "SalesItemLineDetail", "SalesItemLineDetail": {"ItemRef": {"value": "1"},
+               "ItemAccountRef": {"value": "22", "name": "Legacy Sales"}, "Qty": 2, "UnitPrice": 45,
+               "ClassRef": {"value": "c1"}}},
+              {"Id": "2", "LineNum": 2, "Description": "Classic Gift Box", "Amount": 45.00,
+               "DetailType": "SalesItemLineDetail", "SalesItemLineDetail": {"ItemRef": {"value": "1"},
+               "Qty": 1, "UnitPrice": 45}}]}'
+      - input: ref('stg_item')
+        rows:
+          - {qbo_id: "1", income_account_qbo_id: "21", expense_account_qbo_id: "31"}
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "21", classification: Revenue}
+          - {qbo_id: "22", classification: Revenue}
+    expect:
+      rows:
+        - {txn_type: Invoice, txn_qbo_id: "101", line_num: 1, detail_type: SalesItemLineDetail, is_posting: true, txn_date: "2025-11-03", account_qbo_id: "22", posting_type: Credit, amount_signed: "90.00", customer_qbo_id: "7", class_qbo_id: c1, memo: Classic Gift Box}
+        - {txn_type: Invoice, txn_qbo_id: "101", line_num: 2, detail_type: SalesItemLineDetail, is_posting: true, txn_date: "2025-11-03", account_qbo_id: "21", posting_type: Credit, amount_signed: "45.00", customer_qbo_id: "7", class_qbo_id: null, memo: Classic Gift Box}
+
+  - name: dt_discount_line_detail
+    description: >
+      DiscountLineDetail posts to DiscountAccountRef (contra-revenue): an invoice debits it, so
+      Revenue is reduced (negative). The SubTotal line before it does not post.
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: Invoice
+            qbo_id: "102"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-11-04", "CustomerRef": {"value": "7"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 200.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "Qty": 4, "UnitPrice": 50}},
+              {"Amount": 200.00, "DetailType": "SubTotalLineDetail", "SubTotalLineDetail": {}},
+              {"Amount": 20.00, "DetailType": "DiscountLineDetail", "DiscountLineDetail": {
+               "PercentBased": true, "DiscountPercent": 10, "DiscountAccountRef": {"value": "49"}}}]}'
+      - input: ref('stg_item')
+        rows:
+          - {qbo_id: "1", income_account_qbo_id: "21", expense_account_qbo_id: "31"}
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "21", classification: Revenue}
+          - {qbo_id: "49", classification: Revenue}
+    expect:
+      rows:
+        - {txn_qbo_id: "102", line_num: 1, detail_type: SalesItemLineDetail, is_posting: true, account_qbo_id: "21", posting_type: Credit, amount_signed: "200.00"}
+        - {txn_qbo_id: "102", line_num: 2, detail_type: SubTotalLineDetail, is_posting: false, account_qbo_id: null, posting_type: null, amount_signed: null}
+        - {txn_qbo_id: "102", line_num: 3, detail_type: DiscountLineDetail, is_posting: true, account_qbo_id: "49", posting_type: Debit, amount_signed: "-20.00"}
+
+  - name: dt_sub_total_line_detail
+    description: SubTotalLineDetail is non-posting (spec 3.1 skip); it has no Id / LineNum, so line_num is the array position.
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: SalesReceipt
+            qbo_id: "103"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-12-01", "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 45.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "Qty": 1, "UnitPrice": 45}},
+              {"Amount": 45.00, "DetailType": "SubTotalLineDetail", "SubTotalLineDetail": {}}]}'
+      - input: ref('stg_item')
+        rows:
+          - {qbo_id: "1", income_account_qbo_id: "21", expense_account_qbo_id: "31"}
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "21", classification: Revenue}
+    expect:
+      rows:
+        - {txn_type: SalesReceipt, line_num: 1, detail_type: SalesItemLineDetail, is_posting: true, amount_signed: "45.00"}
+        - {txn_type: SalesReceipt, line_num: 2, detail_type: SubTotalLineDetail, is_posting: false, account_qbo_id: null, amount: "45.00", amount_signed: null}
+
+  - name: dt_description_only
+    description: DescriptionOnly lines (detail object DescriptionLineDetail, no Amount) are non-posting; their text is the memo.
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: Invoice
+            qbo_id: "104"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-12-02", "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 95.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "Qty": 1, "UnitPrice": 95}},
+              {"Id": "2", "LineNum": 2, "Description": "Thank you for your business!",
+               "DetailType": "DescriptionOnly", "DescriptionLineDetail": {}},
+              {"Id": "3", "LineNum": 3, "Amount": 95.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "Qty": 1, "UnitPrice": 95}}]}'
+      - input: ref('stg_item')
+        rows:
+          - {qbo_id: "1", income_account_qbo_id: "21", expense_account_qbo_id: "31"}
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "21", classification: Revenue}
+    expect:
+      rows:
+        - {line_num: 1, detail_type: SalesItemLineDetail, is_posting: true, amount_signed: "95.00"}
+        - {line_num: 2, detail_type: DescriptionOnly, is_posting: false, account_qbo_id: null, amount: null, amount_signed: null, memo: Thank you for your business!}
+        - {line_num: 3, detail_type: SalesItemLineDetail, is_posting: true, amount_signed: "95.00"}
+
+  - name: dt_account_based_expense_line_detail
+    description: AccountBasedExpenseLineDetail posts to AccountRef directly; a bill debits the expense, so it is positive.
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: Bill
+            qbo_id: "105"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-10-01", "VendorRef": {"value": "55"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Description": "Rent October 2025", "Amount": 8500.00,
+               "DetailType": "AccountBasedExpenseLineDetail", "AccountBasedExpenseLineDetail": {
+               "AccountRef": {"value": "62"}, "BillableStatus": "NotBillable"}}]}'
+      - input: ref('stg_item')
+        rows: []
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "62", classification: Expense}
+    expect:
+      rows:
+        - {txn_type: Bill, txn_qbo_id: "105", line_num: 1, detail_type: AccountBasedExpenseLineDetail, is_posting: true, account_qbo_id: "62", posting_type: Debit, amount_signed: "8500.00", vendor_qbo_id: "55", customer_qbo_id: null}
+
+  - name: dt_item_based_expense_line_detail
+    description: ItemBasedExpenseLineDetail posts to Item.ExpenseAccountRef (here a COGS account); a bill debits it.
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: Bill
+            qbo_id: "106"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-10-02", "VendorRef": {"value": "56"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 215.00, "DetailType": "ItemBasedExpenseLineDetail",
+               "ItemBasedExpenseLineDetail": {"ItemRef": {"value": "1"}, "Qty": 10, "UnitPrice": 21.5,
+               "ClassRef": {"value": "c2"}}}]}'
+      - input: ref('stg_item')
+        rows:
+          - {qbo_id: "1", income_account_qbo_id: "21", expense_account_qbo_id: "31"}
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "31", classification: Expense}
+    expect:
+      rows:
+        - {txn_type: Bill, line_num: 1, detail_type: ItemBasedExpenseLineDetail, is_posting: true, account_qbo_id: "31", posting_type: Debit, amount_signed: "215.00", vendor_qbo_id: "56", class_qbo_id: c2}
+
+  - name: dt_journal_entry_line_detail
+    description: >
+      JournalEntryLineDetail uses AccountRef + PostingType. Debit-natural (Expense, Asset) are
+      positive on debit, credit-natural (Revenue) positive on credit. JE line Ids start at "0".
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: JournalEntry
+            qbo_id: "107"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-10-31", "PrivateNote": "Payroll - October 2025", "Line": [
+              {"Id": "0", "Description": "Gross wages", "Amount": 1000.00, "DetailType": "JournalEntryLineDetail",
+               "JournalEntryLineDetail": {"PostingType": "Debit", "AccountRef": {"value": "61"}}},
+              {"Id": "1", "Description": "Net pay", "Amount": 1000.00, "DetailType": "JournalEntryLineDetail",
+               "JournalEntryLineDetail": {"PostingType": "Credit", "AccountRef": {"value": "1"}}},
+              {"Id": "2", "Amount": 50.00, "DetailType": "JournalEntryLineDetail",
+               "JournalEntryLineDetail": {"PostingType": "Debit", "AccountRef": {"value": "1"}}},
+              {"Id": "3", "Amount": 50.00, "DetailType": "JournalEntryLineDetail",
+               "JournalEntryLineDetail": {"PostingType": "Credit", "AccountRef": {"value": "70"},
+               "Entity": {"Type": "Vendor", "EntityRef": {"value": "57"}}}}]}'
+      - input: ref('stg_item')
+        rows: []
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "61", classification: Expense}
+          - {qbo_id: "1", classification: Asset}
+          - {qbo_id: "70", classification: Revenue}
+    expect:
+      rows:
+        - {line_num: 1, account_qbo_id: "61", posting_type: Debit, amount_signed: "1000.00", memo: Gross wages, vendor_qbo_id: null}
+        - {line_num: 2, account_qbo_id: "1", posting_type: Credit, amount_signed: "-1000.00", memo: Net pay, vendor_qbo_id: null}
+        - {line_num: 3, account_qbo_id: "1", posting_type: Debit, amount_signed: "50.00", memo: Payroll - October 2025, vendor_qbo_id: null}
+        - {line_num: 4, account_qbo_id: "70", posting_type: Credit, amount_signed: "50.00", memo: Payroll - October 2025, vendor_qbo_id: "57"}
+
+  - name: credit_docs_flip_sign
+    description: >
+      Spec 3.2: CreditMemo and RefundReceipt lines flip sign versus an invoice (a discount on a
+      credit memo flips too); a Purchase with Credit = true (credit-card credit) flips versus a
+      normal purchase. Purchase EntityRef type Vendor resolves the vendor. The ItemAccountRef
+      precedence applies to credit docs too (RefundReceipt -> 22, CreditMemo falls back to 21).
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: CreditMemo
+            qbo_id: "301"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-12-10", "CustomerRef": {"value": "8"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 60.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "Qty": 1, "UnitPrice": 60}},
+              {"Amount": 60.00, "DetailType": "SubTotalLineDetail", "SubTotalLineDetail": {}},
+              {"Amount": 6.00, "DetailType": "DiscountLineDetail", "DiscountLineDetail": {
+               "PercentBased": true, "DiscountPercent": 10, "DiscountAccountRef": {"value": "49"}}}]}'
+          - entity_type: RefundReceipt
+            qbo_id: "302"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-12-11", "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 45.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "ItemAccountRef": {"value": "22"},
+               "Qty": 1, "UnitPrice": 45}}]}'
+          - entity_type: Purchase
+            qbo_id: "303"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-12-12", "PaymentType": "CreditCard", "Credit": true,
+              "EntityRef": {"value": "55", "type": "Vendor"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 30.00, "DetailType": "AccountBasedExpenseLineDetail",
+               "AccountBasedExpenseLineDetail": {"AccountRef": {"value": "62"}}}]}'
+          - entity_type: Purchase
+            qbo_id: "304"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-12-12", "PaymentType": "CreditCard", "Credit": false,
+              "EntityRef": {"value": "55", "type": "Vendor"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 30.00, "DetailType": "AccountBasedExpenseLineDetail",
+               "AccountBasedExpenseLineDetail": {"AccountRef": {"value": "62"}}}]}'
+      - input: ref('stg_item')
+        rows:
+          - {qbo_id: "1", income_account_qbo_id: "21", expense_account_qbo_id: "31"}
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "21", classification: Revenue}
+          - {qbo_id: "22", classification: Revenue}
+          - {qbo_id: "49", classification: Revenue}
+          - {qbo_id: "62", classification: Expense}
+    expect:
+      rows:
+        - {txn_type: CreditMemo, line_num: 1, account_qbo_id: "21", posting_type: Debit, amount_signed: "-60.00", customer_qbo_id: "8"}
+        - {txn_type: CreditMemo, line_num: 2, posting_type: null, amount_signed: null, customer_qbo_id: "8"}
+        - {txn_type: CreditMemo, line_num: 3, posting_type: Credit, amount_signed: "6.00", customer_qbo_id: "8"}
+        - {txn_type: RefundReceipt, line_num: 1, account_qbo_id: "22", posting_type: Debit, amount_signed: "-45.00", customer_qbo_id: null}
+        - {txn_type: Purchase, txn_qbo_id: "303", line_num: 1, posting_type: Credit, amount_signed: "-30.00", customer_qbo_id: null}
+        - {txn_type: Purchase, txn_qbo_id: "304", line_num: 1, posting_type: Debit, amount_signed: "30.00", customer_qbo_id: null}
+
+  - name: void_delete_flags_and_untransformed_types
+    description: >
+      Voided (zeroed) and deleted transactions keep their lines with the flags set (vw_fact_gl
+      filters them); a SalesReceipt carries its class at transaction level. Deposit and
+      VendorCredit are landed but not transformed: no lines.
+    model: stg_txn_line
+    given:
+      - input: ref('stg_entity_latest')
+        rows:
+          - entity_type: Invoice
+            qbo_id: "401"
+            is_deleted: false
+            is_voided: true
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-03-10", "PrivateNote": "Voided", "TotalAmt": 0.00, "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 0.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "Qty": 0, "UnitPrice": 45}}]}'
+          - entity_type: SalesReceipt
+            qbo_id: "402"
+            is_deleted: true
+            is_voided: false
+            synced_at: "2026-09-05 00:00:00+00"
+            payload: '{"TxnDate": "2025-03-11", "ClassRef": {"value": "c3"}, "Line": [
+              {"Id": "1", "LineNum": 1, "Amount": 45.00, "DetailType": "SalesItemLineDetail",
+               "SalesItemLineDetail": {"ItemRef": {"value": "1"}, "Qty": 1, "UnitPrice": 45}}]}'
+          - entity_type: Deposit
+            qbo_id: "403"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-03-12", "Line": [{"Id": "1", "LineNum": 1, "Amount": 99.00,
+              "DetailType": "DepositLineDetail", "DepositLineDetail": {"AccountRef": {"value": "70"}}}]}'
+          - entity_type: VendorCredit
+            qbo_id: "404"
+            is_deleted: false
+            is_voided: false
+            synced_at: "2026-09-01 00:00:00+00"
+            payload: '{"TxnDate": "2025-03-12", "Line": [{"Id": "1", "LineNum": 1, "Amount": 12.00,
+              "DetailType": "AccountBasedExpenseLineDetail", "AccountBasedExpenseLineDetail": {
+              "AccountRef": {"value": "62"}}}]}'
+      - input: ref('stg_item')
+        rows:
+          - {qbo_id: "1", income_account_qbo_id: "21", expense_account_qbo_id: "31"}
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "21", classification: Revenue}
+    expect:
+      rows:
+        - {txn_type: Invoice, txn_qbo_id: "401", amount_signed: "0.00", is_voided: true, is_deleted: false, memo: Voided, class_qbo_id: null}
+        - {txn_type: SalesReceipt, txn_qbo_id: "402", amount_signed: "45.00", is_voided: false, is_deleted: true, class_qbo_id: c3, synced_at: "2026-09-05 00:00:00+00"}

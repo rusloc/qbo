@@ -1,0 +1,130 @@
+{
+  "QueryResponse": {
+    "Invoice": [
+      {
+        "AllowIPNPayment": false,
+        "AllowOnlinePayment": false,
+        "AllowOnlineCreditCardPayment": false,
+        "AllowOnlineACHPayment": false,
+        "domain": "QBO",
+        "sparse": false,
+        "Id": "9001",
+        "SyncToken": "0",
+        "MetaData": {
+          "CreateTime": "2026-08-03T09:12:44-07:00",
+          "LastUpdatedTime": "2026-08-03T09:12:44-07:00"
+        },
+        "CustomField": [],
+        "DocNumber": "F-1001",
+        "TxnDate": "2026-08-03",
+        "CurrencyRef": {"value": "USD", "name": "United States Dollar"},
+        "LinkedTxn": [],
+        "Line": [
+          {
+            "Id": "1",
+            "LineNum": 1,
+            "Description": "Consulting, August",
+            "Amount": 1234.56,
+            "DetailType": "SalesItemLineDetail",
+            "SalesItemLineDetail": {
+              "ItemRef": {"value": "901", "name": "Consulting"},
+              "ClassRef": {"value": "9401", "name": "Services"},
+              "UnitPrice": 1234.56,
+              "Qty": 1,
+              "ItemAccountRef": {"value": "9201", "name": "Services Income"},
+              "TaxCodeRef": {"value": "NON"}
+            }
+          },
+          {
+            "Amount": 1234.56,
+            "DetailType": "SubTotalLineDetail",
+            "SubTotalLineDetail": {}
+          }
+        ],
+        "TxnTaxDetail": {"TotalTax": 0},
+        "CustomerRef": {"value": "9301", "name": "Fake Customer One"},
+        "SalesTermRef": {"value": "3", "name": "Net 30"},
+        "DueDate": "2026-09-02",
+        "TotalAmt": 1234.56,
+        "ApplyTaxAfterDiscount": false,
+        "PrintStatus": "NotSet",
+        "EmailStatus": "NotSet",
+        "Balance": 1234.56
+      },
+      {
+        "AllowIPNPayment": false,
+        "AllowOnlinePayment": false,
+        "AllowOnlineCreditCardPayment": false,
+        "AllowOnlineACHPayment": false,
+        "domain": "QBO",
+        "sparse": false,
+        "Id": "9002",
+        "SyncToken": "2",
+        "MetaData": {
+          "CreateTime": "2026-08-10T14:01:02-07:00",
+          "LastUpdatedTime": "2026-08-11T08:30:00-07:00"
+        },
+        "CustomField": [],
+        "DocNumber": "F-1002",
+        "TxnDate": "2026-08-10",
+        "CurrencyRef": {"value": "USD", "name": "United States Dollar"},
+        "LinkedTxn": [],
+        "Line": [
+          {
+            "Id": "1",
+            "LineNum": 1,
+            "Description": "Widget",
+            "Amount": 0.10,
+            "DetailType": "SalesItemLineDetail",
+            "SalesItemLineDetail": {
+              "ItemRef": {"value": "902", "name": "Widget"},
+              "UnitPrice": 0.10,
+              "Qty": 1,
+              "ItemAccountRef": {"value": "9202", "name": "Sales of Product Income"},
+              "TaxCodeRef": {"value": "NON"}
+            }
+          },
+          {
+            "Id": "2",
+            "LineNum": 2,
+            "Description": "Widget add-on",
+            "Amount": 0.20,
+            "DetailType": "SalesItemLineDetail",
+            "SalesItemLineDetail": {
+              "ItemRef": {"value": "903", "name": "Widget add-on"},
+              "UnitPrice": 0.20,
+              "Qty": 1,
+              "ItemAccountRef": {"value": "9202", "name": "Sales of Product Income"},
+              "TaxCodeRef": {"value": "NON"}
+            }
+          },
+          {
+            "Amount": 0.30,
+            "DetailType": "SubTotalLineDetail",
+            "SubTotalLineDetail": {}
+          },
+          {
+            "Amount": 0.03,
+            "DetailType": "DiscountLineDetail",
+            "DiscountLineDetail": {
+              "PercentBased": true,
+              "DiscountPercent": 10,
+              "DiscountAccountRef": {"value": "9203", "name": "Discounts given"}
+            }
+          }
+        ],
+        "TxnTaxDetail": {"TotalTax": 0},
+        "CustomerRef": {"value": "9302", "name": "Fake Customer Two"},
+        "DueDate": "2026-09-09",
+        "TotalAmt": 0.27,
+        "ApplyTaxAfterDiscount": false,
+        "PrintStatus": "NotSet",
+        "EmailStatus": "NotSet",
+        "Balance": 0.27
+      }
+    ],
+    "startPosition": 1,
+    "maxResults": 2
+  },
+  "time": "2026-09-26T08:00:00.123-07:00"
+}

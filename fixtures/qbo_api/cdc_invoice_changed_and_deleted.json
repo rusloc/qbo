@@ -1,0 +1,72 @@
+{
+  "CDCResponse": [
+    {
+      "QueryResponse": [
+        {
+          "Invoice": [
+            {
+              "AllowIPNPayment": false,
+              "AllowOnlinePayment": false,
+              "AllowOnlineCreditCardPayment": false,
+              "AllowOnlineACHPayment": false,
+              "domain": "QBO",
+              "sparse": false,
+              "Id": "9001",
+              "SyncToken": "1",
+              "MetaData": {
+                "CreateTime": "2026-08-03T09:12:44-07:00",
+                "LastUpdatedTime": "2026-09-25T09:40:10-07:00"
+              },
+              "CustomField": [],
+              "DocNumber": "F-1001",
+              "TxnDate": "2026-08-03",
+              "CurrencyRef": {"value": "USD", "name": "United States Dollar"},
+              "LinkedTxn": [],
+              "Line": [
+                {
+                  "Id": "1",
+                  "LineNum": 1,
+                  "Description": "Consulting, August (corrected)",
+                  "Amount": 1300.01,
+                  "DetailType": "SalesItemLineDetail",
+                  "SalesItemLineDetail": {
+                    "ItemRef": {"value": "901", "name": "Consulting"},
+                    "UnitPrice": 1300.01,
+                    "Qty": 1,
+                    "ItemAccountRef": {"value": "9201", "name": "Services Income"},
+                    "TaxCodeRef": {"value": "NON"}
+                  }
+                },
+                {
+                  "Amount": 1300.01,
+                  "DetailType": "SubTotalLineDetail",
+                  "SubTotalLineDetail": {}
+                }
+              ],
+              "TxnTaxDetail": {"TotalTax": 0},
+              "CustomerRef": {"value": "9301", "name": "Fake Customer One"},
+              "DueDate": "2026-09-02",
+              "TotalAmt": 1300.01,
+              "ApplyTaxAfterDiscount": false,
+              "PrintStatus": "NotSet",
+              "EmailStatus": "NotSet",
+              "Balance": 1300.01
+            },
+            {
+              "domain": "QBO",
+              "status": "Deleted",
+              "Id": "9002",
+              "MetaData": {
+                "LastUpdatedTime": "2026-09-25T09:45:31-07:00"
+              }
+            }
+          ],
+          "startPosition": 1,
+          "maxResults": 2,
+          "totalCount": 2
+        }
+      ]
+    }
+  ],
+  "time": "2026-09-25T10:00:00.456-07:00"
+}

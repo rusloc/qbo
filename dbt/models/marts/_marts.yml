@@ -1,0 +1,140 @@
+version: 2
+
+# Migration-owned tables (ADR-0002, F-05): dbt fills them, never creates / alters / drops them.
+models:
+  - name: dim_account
+    description: Chart of accounts + consultant mapping (stmt_*; defaults on insert only).
+    columns:
+      - name: account_key
+        data_tests: [unique, not_null]
+      - name: qbo_id
+        data_tests: [unique, not_null]
+      - name: stmt_section
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Revenue, COGS, OpEx, OtherInc, OtherExp, Tax]
+
+  - name: dim_customer
+    columns:
+      - name: customer_key
+        data_tests: [unique, not_null]
+      - name: qbo_id
+        data_tests: [unique, not_null]
+
+  - name: dim_vendor
+    columns:
+      - name: vendor_key
+        data_tests: [unique, not_null]
+      - name: qbo_id
+        data_tests: [unique, not_null]
+
+  - name: dim_class
+    columns:
+      - name: class_key
+        data_tests: [unique, not_null]
+      - name: qbo_id
+        data_tests: [unique, not_null]
+
+  - name: dim_date
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
+      - name: d
+        data_tests: [unique, not_null]
+
+  - name: fact_gl
+    description: Exploded, sign-normalized GL lines (spec 2.3, 3.1, 3.2).
+    data_tests:
+      - unique:
+          column_name: "txn_type || '|' || txn_qbo_id || '|' || line_num"
+    columns:
+      - name: account_key
+        description: Gate P2 - zero orphan account_key.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_account')
+                field: account_key
+      - name: txn_date
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: d
+      - name: amount_signed
+        data_tests: [not_null]
+
+  - name: fact_budget
+    description: Monthly budget per account (and class) from active QBO ProfitAndLoss budgets.
+    columns:
+      - name: account_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_account')
+                field: account_key
+      - name: budget_month
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: d
+
+unit_tests:
+  - name: dim_account_insert_defaults
+    description: >
+      Spec 3.3 section auto-map, plus the proposed stmt_group (top-level account of the branch)
+      and stmt_sort (numeric AcctNum, else QBO Id) defaults; balance-sheet accounts stay unmapped.
+    model: dim_account
+    overrides:
+      macros:
+        is_incremental: true
+    given:
+      - input: ref('stg_account')
+        rows:
+          - {qbo_id: "8", account_name: Product Sales, fully_qualified: "Sales:Product Sales", account_type: Income, classification: Revenue, acct_num: "4010", is_active: true}
+          - {qbo_id: "12", account_name: Product Costs, fully_qualified: "Cost of Goods Sold:Product Costs", account_type: Cost of Goods Sold, classification: Expense, acct_num: null, is_active: true}
+          - {qbo_id: "19", account_name: Digital Advertising, fully_qualified: "Marketing:Digital Advertising", account_type: Expense, classification: Expense, acct_num: "61-10", is_active: true}
+          - {qbo_id: "32", account_name: Interest Earned, fully_qualified: Interest Earned, account_type: Other Income, classification: Revenue, acct_num: "7000", is_active: true}
+          - {qbo_id: "33", account_name: Depreciation, fully_qualified: Depreciation, account_type: Other Expense, classification: Expense, acct_num: "8000", is_active: false}
+          - {qbo_id: "1", account_name: Checking, fully_qualified: Checking, account_type: Bank, classification: Asset, acct_num: "1000", is_active: true}
+    expect:
+      rows:
+        - {qbo_id: "8", stmt_section: Revenue, stmt_group: Sales, stmt_sort: 4010, is_active: true}
+        - {qbo_id: "12", stmt_section: COGS, stmt_group: Cost of Goods Sold, stmt_sort: 12, is_active: true}
+        - {qbo_id: "19", stmt_section: OpEx, stmt_group: Marketing, stmt_sort: 19, is_active: true}
+        - {qbo_id: "32", stmt_section: OtherInc, stmt_group: Interest Earned, stmt_sort: 7000, is_active: true}
+        - {qbo_id: "33", stmt_section: OtherExp, stmt_group: Depreciation, stmt_sort: 8000, is_active: false}
+        - {qbo_id: "1", stmt_section: null, stmt_group: null, stmt_sort: 1000, is_active: true}
+
+  - name: fact_budget_sums_and_filters
+    description: >
+      Active ProfitAndLoss budgets only; entries for the same month / account / class are summed
+      (e.g. a budget subdivided by customer), and a null class stays one null-class row.
+    model: fact_budget
+    overrides:
+      macros:
+        is_incremental: true
+    given:
+      - input: ref('stg_budget_line')
+        rows:
+          - {budget_qbo_id: "1", budget_type: ProfitAndLoss, is_active: true, budget_month: "2025-11-01", account_qbo_id: "19", class_qbo_id: null, customer_qbo_id: "7", amount: "3000.00"}
+          - {budget_qbo_id: "1", budget_type: ProfitAndLoss, is_active: true, budget_month: "2025-11-01", account_qbo_id: "19", class_qbo_id: null, customer_qbo_id: "8", amount: "2000.00"}
+          - {budget_qbo_id: "1", budget_type: ProfitAndLoss, is_active: true, budget_month: "2025-11-01", account_qbo_id: "8", class_qbo_id: c1, customer_qbo_id: null, amount: "40000.00"}
+          - {budget_qbo_id: "2", budget_type: ProfitAndLoss, is_active: false, budget_month: "2025-11-01", account_qbo_id: "19", class_qbo_id: null, customer_qbo_id: null, amount: "9999.00"}
+      - input: ref('dim_account')
+        rows:
+          - {account_key: 108, qbo_id: "8"}
+          - {account_key: 119, qbo_id: "19"}
+      - input: ref('dim_class')
+        rows:
+          - {class_key: 501, qbo_id: c1}
+    expect:
+      rows:
+        - {budget_month: "2025-11-01", account_key: 119, class_key: null, amount: "5000.00"}
+        - {budget_month: "2025-11-01", account_key: 108, class_key: 501, amount: "40000.00"}

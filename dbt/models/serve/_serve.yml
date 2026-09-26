@@ -1,0 +1,48 @@
+version: 2
+
+# Serve layer (spec 2.4): the only objects Power BI reads, as qbo_reader (select granted by the
+# serve folder config in dbt_project.yml; ADR-0003). Relationships for the model:
+#   vw_dim_date[date_key]    1 -> * vw_fact_gl[date_key], vw_fact_budget[date_key]
+#   vw_dim_account[account_key] 1 -> * vw_fact_gl[account_key], vw_fact_budget[account_key]
+#   vw_dim_class[class_key]  1 -> * vw_fact_gl[class_key], vw_fact_budget[class_key]
+models:
+  - name: vw_fact_gl
+    description: >
+      Posted P&L lines (account classification Revenue / Expense; USER 2026-09-26) without voided /
+      deleted transactions. Balance-sheet JE sides stay in fact_gl only. Unmapped P&L accounts stay
+      visible with a blank stmt_section. Measures - Amount = SUM(amount_signed).
+    columns:
+      - name: gl_key
+        data_tests: [unique, not_null]
+      - name: date_key
+        description: yyyymmdd of txn_date.
+        data_tests: [not_null]
+      - name: amount_signed
+        description: Revenue positive when earned, expenses positive when spent (spec 3.2).
+
+  - name: vw_dim_account
+    columns:
+      - name: account_key
+        data_tests: [unique, not_null]
+      - name: stmt_section
+        description: Revenue | COGS | OpEx | OtherInc | OtherExp | Tax; null = not on the P&L.
+
+  - name: vw_dim_date
+    description: Contiguous whole-year calendar; mark as date table on d.
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
+
+  - name: vw_dim_class
+    columns:
+      - name: class_key
+        data_tests: [unique, not_null]
+
+  - name: vw_fact_budget
+    description: Monthly budget in P&L presentation sign. Measures - Budget = SUM(amount).
+    columns:
+      - name: budget_key
+        data_tests: [unique, not_null]
+      - name: date_key
+        description: yyyymmdd of the first day of budget_month.
+        data_tests: [not_null]

@@ -15,6 +15,7 @@ flags:
 
 vars:
   fy_start: 1                                # FY start month for dim_date fiscal columns (spec §2.2)
+  full_reload: false                         # true = fact_gl reprocesses every transaction (--full-refresh is disabled, ADR-0002)
 
 models:
   qbo_pnl:
