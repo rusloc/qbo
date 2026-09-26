@@ -24,23 +24,36 @@
 - 2026-09-25 #decision ETL stack: DuckDB first, pandas fallback, no Polars; psycopg 3.3.6 (ETL, passed the Smart App Control test) + psycopg2 2.9.10 (dbt); `etl/.venv` + pinned `requirements.txt`; ferry aligned (dax-sql-formatter, no `execute_sql`, dead tools removed, `PCAND-NNN`) — ADR-0009
 - 2026-09-25 #decision Power BI (Phase 4) deferred: focus on QBO, ETL, DB schema and a backend filled with data (USER)
 - 2026-09-25 #decision Vault token single-flight = transaction-scoped advisory lock, not a row lock (`postgres` has no `UPDATE` on `vault.secrets`) — ADR-0007 amended
+- 2026-09-26 #decision Backend build = synthetic data (Track C) plus the full ETL flow (P1 extractor `qbo_sync`)
+- 2026-09-26 #decision Budget source = QBO `Budget` entity landed in `raw_entity` (spec issue 3 resolved; Budget is read-only in the API → sandbox budgets are entered in the QBO web app)
+- 2026-09-26 #decision Power BI access through `qbo_reader` on the 5 `vw_*` views; the 2026-09-25 "Power BI deferred" decision is lifted
+- 2026-09-26 #decision `DB_URL` is the only database secret in `etl/.env`; `run_dbt.py` derives the dbt profile variables
+- 2026-09-26 #decision `vw_fact_gl` = P&L lines only (`classification` Revenue / Expense, not `stmt_section`); `fact_gl` keeps every line — deviation from spec §2.4
+- 2026-09-26 #decision Sales-line account = `SalesItemLineDetail.ItemAccountRef`, fallback the item's `IncomeAccountRef` — deviation from spec §3.1
+- 2026-09-26 #decision `vw_fact_gl` / `vw_fact_budget` carry an integer `date_key` for the date relationship (addition to spec §2.4)
+- 2026-09-26 #decision Demo and real data share schema `qbo`: synthetic now; a USER-run purge before the first real sandbox backfill (separate demo schema rejected)
 
 ### Open ADR candidates
 - ADR-0005 — React report: plotting library, build tool, hosting
 - ADR-0006 — Power BI Service: refresh path (cloud connection vs gateway) and deploy tool
+- 2026-09-26 — record the spec deviations (budget source, `vw_fact_gl` scope, `ItemAccountRef`, `date_key`) in the CLAUDE.md spec-delta list or ADR-0010
+- 2026-09-26 — migration `qbo.sync_state.last_backfill_at` (delete detection after a CDC gap or cap; proposed by ferry-B)
 
 ### Features
 | ID | Feature | Spec | State |
 |---|---|---|---|
-| F-01 | Sandbox company + JSON fixtures per entity and `DetailType` | §4 P0 Track A | planned |
-| F-02 | Synthetic demo dataset (`generate_synthetic.py`, 24 months; QBO-shaped JSON into `raw_entity`) | §4 P0 Track C | planned |
+| F-01 | Sandbox company + JSON fixtures per entity and `DetailType` | §4 P0 Track A | in progress (hand-built API response fixtures 2026-09-26; per-DetailType sandbox captures pending) |
+| F-02 | Synthetic demo dataset (`generate_synthetic.py`, 24 months; QBO-shaped JSON into `raw_entity`) | §4 P0 Track C | in progress (generator + loader built and tested 2026-09-26; load into `vosk.dev` pending `etl/.env`) |
 | F-03 | Sandbox seeding (`seed_sandbox.py`) | §4 P0 Track B | planned |
-| F-04 | Extractor `qbo_sync` (auth, backfill, cdc, status) | §4 P1 | planned |
-| F-05 | Warehouse DDL + transforms raw → stg → mart → serve | §2, §3, §4 P2 | in progress (DDL M1–M5 applied to `vosk.dev` 2026-09-25; dbt transforms next) |
+| F-04 | Extractor `qbo_sync` (auth, backfill, cdc, status) | §4 P1 | in progress (code + tests 2026-09-26; gate P1 needs the sandbox) |
+| F-05 | Warehouse DDL + transforms raw → stg → mart → serve | §2, §3, §4 P2 | in progress (DDL M1–M5 applied 2026-09-25; dbt models + tests built 2026-09-26; first build pending) |
 | F-06 | Validation suite V1–V3 | §5, §4 P3 | planned |
-| F-07 | Power BI single-page P&L (PBIP → .pbit + demo .pbix) | §6, §7, §4 P4 | planned (deferred by USER 2026-09-25) |
+| F-07 | Power BI single-page P&L (PBIP → .pbit + demo .pbix) | §6, §7, §4 P4 | planned (deferral lifted 2026-09-26; starts once `vw_*` have rows) |
 | F-08 | React online report | USER 2026-09-25 | planned (scope to be specified) |
 
 ## Idea: GitHub MCP for repo / CI visibility (2026-09-25, not picked up)
 - GitHub MCP, read-only (`/readonly`), toolsets repos / issues / pull_requests / actions, token via `${GITHUB_PAT}` in `.mcp.json` — once CI exists
 - Git MCP only with `mcp__git__*` write tools denied (write tools would bypass the no-git rule)
+
+## Idea: demo item re-pointed to another income account mid-window (2026-09-26, not picked up)
+- Makes the `ItemAccountRef` rule visible in the demo numbers, not only in the dbt unit tests (ferry-A)
