@@ -1,0 +1,76 @@
+/// Chart of accounts with the consultant mapping layer (qbo.vw_dim_account). stmt_section: Revenue | COGS | OpEx | OtherInc | OtherExp | Tax; blank = not on the P&L or not mapped yet.
+table DimAccount
+
+	column account_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: account_key
+
+	column qbo_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: qbo_id
+
+	column account_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: account_name
+
+	column fully_qualified
+		dataType: string
+		summarizeBy: none
+		sourceColumn: fully_qualified
+
+	column account_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: account_type
+
+	column account_subtype
+		dataType: string
+		summarizeBy: none
+		sourceColumn: account_subtype
+
+	column classification
+		dataType: string
+		summarizeBy: none
+		sourceColumn: classification
+
+	column parent_qbo_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: parent_qbo_id
+
+	column is_active
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_active
+
+	column stmt_section
+		dataType: string
+		summarizeBy: none
+		sourceColumn: stmt_section
+
+	column stmt_group
+		dataType: string
+		summarizeBy: none
+		sourceColumn: stmt_group
+
+	column stmt_sort
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: stmt_sort
+
+	partition DimAccount = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(Server, Database),
+				    View = Source{[Schema = "qbo", Item = "vw_dim_account"]}[Data]
+				in
+				    View

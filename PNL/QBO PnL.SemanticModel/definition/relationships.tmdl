@@ -1,0 +1,23 @@
+relationship 21738c55-beb0-4c3e-a490-3b9643d50c55
+	fromColumn: FactGL.date_key
+	toColumn: DimDate.date_key
+
+relationship 0ecf2a34-7ebd-41b8-a455-5916238de700
+	fromColumn: FactGL.account_key
+	toColumn: DimAccount.account_key
+
+relationship d1326912-4760-4e7a-ad21-65384f25b007
+	fromColumn: FactGL.class_key
+	toColumn: DimClass.class_key
+
+relationship 444727b1-2de1-471b-a8a2-983a17fe796a
+	fromColumn: FactBudget.date_key
+	toColumn: DimDate.date_key
+
+relationship ce1c3775-63c4-4a74-ab95-31e3f16130f4
+	fromColumn: FactBudget.account_key
+	toColumn: DimAccount.account_key
+
+relationship 27df7d3f-d501-4fc6-a64b-454ada57a0da
+	fromColumn: FactBudget.class_key
+	toColumn: DimClass.class_key

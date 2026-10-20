@@ -1,0 +1,91 @@
+/// Posted P&L lines from qbo.vw_fact_gl (voided / deleted removed; Revenue and Expense classifications only). amount_signed: revenue positive when earned, expenses positive when spent.
+table FactGL
+
+	column gl_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: gl_key
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column txn_date
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		summarizeBy: none
+		sourceColumn: txn_date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column txn_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: txn_type
+
+	column txn_qbo_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: txn_qbo_id
+
+	column line_num
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: line_num
+
+	column account_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: account_key
+
+	column customer_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: customer_key
+
+	column vendor_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: vendor_key
+
+	column class_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: class_key
+
+	column amount_signed
+		dataType: decimal
+		formatString: \$#,0.00;-\$#,0.00;\$#,0.00
+		summarizeBy: none
+		sourceColumn: amount_signed
+
+	column memo
+		dataType: string
+		summarizeBy: none
+		sourceColumn: memo
+
+	partition FactGL = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(Server, Database),
+				    View = Source{[Schema = "qbo", Item = "vw_fact_gl"]}[Data],
+				    // numeric(15,2) -> fixed decimal (Currency.Type): the model column is decimal, never double.
+				    // A type change folds into the PostgreSQL query.
+				    Typed = Table.TransformColumnTypes(View, {{"amount_signed", Currency.Type}})
+				in
+				    Typed

@@ -1,0 +1,55 @@
+/// Disconnected statement layout for the P&L matrix (spec 6): section rows map to DimAccount[stmt_section], total rows are computed. Drives [PnL Row].
+table pnl_layout
+
+	column row_sort
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: [row_sort]
+
+	column row_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: [row_label]
+		sortByColumn: row_sort
+
+	column row_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: [row_key]
+
+	column is_total
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: [is_total]
+
+	column is_expense
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: [is_expense]
+
+	partition pnl_layout = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "row_sort", INTEGER
+				    ,"row_label", STRING
+				    ,"row_key", STRING
+				    ,"is_total", BOOLEAN
+				    ,"is_expense", BOOLEAN
+				    ,{
+				        { 1, "Revenue", "Revenue", FALSE, FALSE }
+				        ,{ 2, "Cost of goods sold", "COGS", FALSE, TRUE }
+				        ,{ 3, "GROSS PROFIT", "GP", TRUE, FALSE }
+				        ,{ 4, "Operating expenses", "OpEx", FALSE, TRUE }
+				        ,{ 5, "EBITDA", "EBITDA", TRUE, FALSE }
+				        ,{ 6, "Other income", "OtherInc", FALSE, FALSE }
+				        ,{ 7, "Other expense", "OtherExp", FALSE, TRUE }
+				        ,{ 8, "Tax", "Tax", FALSE, TRUE }
+				        ,{ 9, "NET INCOME", "NI", TRUE, FALSE }
+				    }
+				)

@@ -1,0 +1,8 @@
+/// Supabase session pooler host (IPv4), optionally host:port. Placeholder region host: set it per client. No project ref, user or password is stored in the PBIP.
+expression Server = "aws-0-eu-west-1.pooler.supabase.com" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+/// Postgres database name (Supabase default: postgres).
+expression Database = "postgres" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+/// First month of the fiscal year, 1..12 (1 = calendar year). Drives DimDate fiscal_year / fiscal_period.
+expression FY_START = 1 meta [IsParameterQuery=true, Type="Number", IsParameterQueryRequired=true]

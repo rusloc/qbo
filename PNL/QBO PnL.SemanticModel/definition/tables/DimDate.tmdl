@@ -1,0 +1,92 @@
+/// Contiguous whole-year calendar (qbo.vw_dim_date), marked as the date table on d. Fiscal columns follow the FY_START parameter.
+table DimDate
+	dataCategory: Time
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column d
+		dataType: dateTime
+		isKey
+		formatString: yyyy-mm-dd
+		summarizeBy: none
+		sourceColumn: d
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column y
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: y
+
+	column q
+		dataType: string
+		summarizeBy: none
+		sourceColumn: q
+
+	column m
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: m
+
+	column month_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: month_name
+		sortByColumn: fiscal_period
+
+	column year_month
+		dataType: string
+		summarizeBy: none
+		sourceColumn: year_month
+
+	column fiscal_year
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: fiscal_year
+
+	column fiscal_period
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: fiscal_period
+
+	column week_start
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		summarizeBy: none
+		sourceColumn: week_start
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column is_month_end
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_month_end
+
+	partition DimDate = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(Server, Database),
+				    View = Source{[Schema = "qbo", Item = "vw_dim_date"]}[Data],
+				    // FY_START (1..12) is the source of truth for the fiscal columns in this model: the view's
+				    // fiscal_year / fiscal_period (built from the dbt var fy_start) are replaced here, with the same rule
+				    // as dbt dim_date (a fiscal year is named by the calendar year it ends in). This lets FY_START be
+				    // tested at 1 and 7 without re-running dbt. Breaks query folding on purpose: vw_dim_date holds a
+				    // few thousand rows, so the steps run locally at no cost.
+				    FyStart = if FY_START >= 1 and FY_START <= 12 and Number.RoundDown(FY_START) = FY_START
+				        then FY_START
+				        else error "FY_START must be a whole month number 1..12",
+				    Removed = Table.RemoveColumns(View, {"fiscal_year", "fiscal_period"}),
+				    AddedYear = Table.AddColumn(Removed, "fiscal_year", each if FyStart > 1 and [m] >= FyStart then [y] + 1 else [y], Int64.Type),
+				    AddedPeriod = Table.AddColumn(AddedYear, "fiscal_period", each Number.Mod([m] - FyStart + 12, 12) + 1, Int64.Type)
+				in
+				    AddedPeriod

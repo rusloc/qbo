@@ -1,0 +1,23 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["Server","Database","FY_START","FactGL","FactBudget","DimAccount","DimDate","DimClass"]
+
+ref table FactGL
+ref table FactBudget
+ref table DimAccount
+ref table DimDate
+ref table DimClass
+ref table pnl_layout
+ref table Period
+ref table Comparison
+ref table WaterfallStep
+ref table _Measures

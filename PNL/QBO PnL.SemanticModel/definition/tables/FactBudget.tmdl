@@ -1,0 +1,55 @@
+/// Monthly budget from qbo.vw_fact_budget, in the same P&L presentation sign as FactGL[amount_signed]. date_key = first day of the budget month.
+table FactBudget
+
+	column budget_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: budget_key
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column budget_month
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		summarizeBy: none
+		sourceColumn: budget_month
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column account_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: account_key
+
+	column class_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: class_key
+
+	column amount
+		dataType: decimal
+		formatString: \$#,0.00;-\$#,0.00;\$#,0.00
+		summarizeBy: none
+		sourceColumn: amount
+
+	partition FactBudget = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(Server, Database),
+				    View = Source{[Schema = "qbo", Item = "vw_fact_budget"]}[Data],
+				    // numeric(15,2) -> fixed decimal (Currency.Type), as in FactGL.
+				    Typed = Table.TransformColumnTypes(View, {{"amount", Currency.Type}})
+				in
+				    Typed

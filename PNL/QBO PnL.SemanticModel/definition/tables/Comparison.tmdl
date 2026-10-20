@@ -1,0 +1,27 @@
+/// Disconnected comparison selector for the KPI cards: PY | Budget. No selection = PY.
+table Comparison
+
+	column Comparison
+		dataType: string
+		summarizeBy: none
+		sourceColumn: [Comparison]
+		sortByColumn: 'Comparison Sort'
+
+	column 'Comparison Sort'
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: [Comparison Sort]
+
+	partition Comparison = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "Comparison", STRING
+				    ,"Comparison Sort", INTEGER
+				    ,{
+				        { "PY", 1 }
+				        ,{ "Budget", 2 }
+				    }
+				)

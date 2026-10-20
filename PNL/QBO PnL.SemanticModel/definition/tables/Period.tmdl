@@ -1,0 +1,28 @@
+/// Disconnected period-mode selector: Month | QTD | YTD (fiscal). No selection = YTD.
+table Period
+
+	column Period
+		dataType: string
+		summarizeBy: none
+		sourceColumn: [Period]
+		sortByColumn: 'Period Sort'
+
+	column 'Period Sort'
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: [Period Sort]
+
+	partition Period = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "Period", STRING
+				    ,"Period Sort", INTEGER
+				    ,{
+				        { "Month", 1 }
+				        ,{ "QTD", 2 }
+				        ,{ "YTD", 3 }
+				    }
+				)

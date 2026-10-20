@@ -1,0 +1,29 @@
+/// QBO classes (qbo.vw_dim_class). Facts without a class have a blank class_key.
+table DimClass
+
+	column class_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: class_key
+
+	column qbo_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: qbo_id
+
+	column class_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: class_name
+
+	partition DimClass = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(Server, Database),
+				    View = Source{[Schema = "qbo", Item = "vw_dim_class"]}[Data]
+				in
+				    View

@@ -1,0 +1,36 @@
+/// Disconnected categories for the net income bridge: Revenue, - COGS, - OpEx, +/- Other. The visual total is Net Income.
+table WaterfallStep
+
+	column Step
+		dataType: string
+		summarizeBy: none
+		sourceColumn: [Step]
+		sortByColumn: 'Step Sort'
+
+	column 'Step Sort'
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: [Step Sort]
+
+	column step_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: [step_key]
+
+	partition WaterfallStep = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "Step", STRING
+				    ,"Step Sort", INTEGER
+				    ,"step_key", STRING
+				    ,{
+				        { "Revenue", 1, "Revenue" }
+				        ,{ "- COGS", 2, "COGS" }
+				        ,{ "- OpEx", 3, "OpEx" }
+				        ,{ "+/- Other", 4, "Other" }
+				    }
+				)

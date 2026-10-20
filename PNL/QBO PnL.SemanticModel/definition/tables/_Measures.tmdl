@@ -1,0 +1,706 @@
+/// Measure table: every measure of the model lives here, in display folders.
+table _Measures
+
+	/// Sum of FactGL[amount_signed]. Every P&L section is positive in its natural direction (revenue earned, cost spent).
+	measure Amount = SUM ( FactGL[amount_signed] )
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Base
+
+	/// Sum of FactBudget[amount], same sign convention as Amount.
+	measure Budget = SUM ( FactBudget[amount] )
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Base
+
+	/// Amount on accounts mapped to stmt_section Revenue.
+	measure Revenue =
+			CALCULATE (
+			    [Amount]
+			    ,DimAccount[stmt_section] = "Revenue"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L
+
+	/// Amount on COGS accounts, positive when spent.
+	measure COGS =
+			CALCULATE (
+			    [Amount]
+			    ,DimAccount[stmt_section] = "COGS"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L
+
+	measure 'Gross Profit' = [Revenue] - [COGS]
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L
+
+	measure 'GP %' = DIVIDE ( [Gross Profit], [Revenue] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: P&L
+
+	/// Amount on OpEx accounts, positive when spent.
+	measure OpEx =
+			CALCULATE (
+			    [Amount]
+			    ,DimAccount[stmt_section] = "OpEx"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L
+
+	measure EBITDA = [Gross Profit] - [OpEx]
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L
+
+	/// Other income minus other expense and tax.
+	measure 'Other Net' =
+			VAR _other_income   =
+			    CALCULATE (
+			        [Amount]
+			        ,DimAccount[stmt_section] = "OtherInc"
+			    )
+			VAR _other_expense  =
+			    CALCULATE (
+			        [Amount]
+			        ,DimAccount[stmt_section] IN { "OtherExp", "Tax" }
+			    )
+			RETURN
+			    _other_income - _other_expense
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L
+
+	/// Revenue - COGS - OpEx + OtherInc - OtherExp - Tax (spec 3.2). Accounts with a blank stmt_section are not in Net Income (V2 must be clean).
+	measure 'Net Income' = [Gross Profit] - [OpEx] + [Other Net]
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L
+
+	measure 'NI %' = DIVIDE ( [Net Income], [Revenue] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: P&L
+
+	/// Amount in the same dates one year earlier (spec 7).
+	measure 'Amount PY' =
+			CALCULATE (
+			    [Amount]
+			    ,SAMEPERIODLASTYEAR ( DimDate[d] )
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Comparison
+
+	measure 'Δ PY' = [Amount] - [Amount PY]
+		formatString: +\$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Comparison
+
+	measure 'Δ PY %' = DIVIDE ( [Δ PY], ABS ( [Amount PY] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Comparison
+
+	measure 'Δ Budget' = [Amount] - [Budget]
+		formatString: +\$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Comparison
+
+	measure 'Δ Budget %' = DIVIDE ( [Δ Budget], ABS ( [Budget] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Comparison
+
+	/// Expense-aware budget variance: positive = good. Expense sections invert the sign (over budget = bad).
+	measure 'Var Sentiment' =
+			VAR _section       = SELECTEDVALUE ( DimAccount[stmt_section] )
+			VAR _result        =
+			    IF (
+			        _section IN { "COGS", "OpEx", "OtherExp", "Tax" }
+			        ,-[Δ Budget]
+			        ,[Δ Budget]
+			    )
+			RETURN
+			    _result
+		formatString: +\$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Comparison
+
+	/// Fiscal year-to-date Amount through the last fiscal period in context.
+	/// Replaces the spec TOTALYTD, which needs a literal year-end date and cannot follow the FY_START parameter.
+	measure 'Amount YTD' =
+			VAR _fy            = MAX ( DimDate[fiscal_year] )
+			VAR _to            = MAX ( DimDate[fiscal_period] )
+			VAR _result        =
+			    CALCULATE (
+			        [Amount]
+			        ,REMOVEFILTERS ( DimDate )
+			        ,DimDate[fiscal_year] = _fy
+			        ,DimDate[fiscal_period] <= _to
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Comparison
+
+	measure 'Revenue Budget' =
+			CALCULATE (
+			    [Budget]
+			    ,DimAccount[stmt_section] = "Revenue"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L\Budget
+
+	measure 'COGS Budget' =
+			CALCULATE (
+			    [Budget]
+			    ,DimAccount[stmt_section] = "COGS"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L\Budget
+
+	measure 'Gross Profit Budget' = [Revenue Budget] - [COGS Budget]
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L\Budget
+
+	measure 'OpEx Budget' =
+			CALCULATE (
+			    [Budget]
+			    ,DimAccount[stmt_section] = "OpEx"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L\Budget
+
+	measure 'EBITDA Budget' = [Gross Profit Budget] - [OpEx Budget]
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L\Budget
+
+	measure 'Other Net Budget' =
+			VAR _other_income   =
+			    CALCULATE (
+			        [Budget]
+			        ,DimAccount[stmt_section] = "OtherInc"
+			    )
+			VAR _other_expense  =
+			    CALCULATE (
+			        [Budget]
+			        ,DimAccount[stmt_section] IN { "OtherExp", "Tax" }
+			    )
+			RETURN
+			    _other_income - _other_expense
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L\Budget
+
+	measure 'Net Income Budget' = [Gross Profit Budget] - [OpEx Budget] + [Other Net Budget]
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: P&L\Budget
+
+	/// Fiscal year on the FY slicer; with no selection, the fiscal year of the latest posted transaction.
+	measure 'Selected FY' =
+			VAR _last_date     =
+			    CALCULATE (
+			        MAX ( FactGL[txn_date] )
+			        ,REMOVEFILTERS ( DimDate )
+			        ,REMOVEFILTERS ( DimAccount )
+			    )
+			VAR _latest_fy     =
+			    CALCULATE (
+			        MAX ( DimDate[fiscal_year] )
+			        ,REMOVEFILTERS ( DimDate )
+			        ,DimDate[d] = _last_date
+			    )
+			VAR _result        =
+			    IF (
+			        ISFILTERED ( DimDate[fiscal_year] )
+			        ,MAX ( DimDate[fiscal_year] )
+			        ,COALESCE ( _latest_fy, MAX ( DimDate[fiscal_year] ) )
+			    )
+			RETURN
+			    _result
+		formatString: 0
+		displayFolder: Selection
+
+	/// Fiscal period the Month / QTD / YTD window ends in: the month picked on the Month slicer, else the last period with posted transactions in the selected fiscal year.
+	measure 'As-of Period' =
+			VAR _fy            = [Selected FY]
+			VAR _picked        =
+			    IF (
+			        ISFILTERED ( DimDate[month_name] )
+			        ,MAX ( DimDate[fiscal_period] )
+			    )
+			VAR _last_date     =
+			    CALCULATE (
+			        MAX ( FactGL[txn_date] )
+			        ,REMOVEFILTERS ( DimDate )
+			        ,REMOVEFILTERS ( DimAccount )
+			        ,DimDate[fiscal_year] = _fy
+			    )
+			VAR _last_period   =
+			    CALCULATE (
+			        MAX ( DimDate[fiscal_period] )
+			        ,REMOVEFILTERS ( DimDate )
+			        ,DimDate[d] = _last_date
+			    )
+			VAR _result        = COALESCE ( _picked, _last_period, 12 )
+			RETURN
+			    _result
+		formatString: 0
+		displayFolder: Selection
+
+	/// Month | QTD | YTD; YTD when nothing is selected.
+	measure 'Period Mode' = SELECTEDVALUE ( Period[Period], "YTD" )
+		displayFolder: Selection
+
+	/// PY | Budget; PY when nothing is selected.
+	measure 'Comparison Mode' = SELECTEDVALUE ( Comparison[Comparison], "PY" )
+		displayFolder: Selection
+
+	/// First fiscal period of the selected window.
+	measure 'Period Start' =
+			VAR _to            = [As-of Period]
+			VAR _mode          = [Period Mode]
+			VAR _result        =
+			    SWITCH (
+			        _mode
+			        ,"Month"
+			            ,_to
+			        ,"QTD"
+			            ,INT ( ( _to - 1 ) / 3 ) * 3 + 1
+			        ,1
+			    )
+			RETURN
+			    _result
+		formatString: 0
+		displayFolder: Selection
+
+	/// Dynamic matrix title, e.g. "P&L | FY2026 | YTD through March".
+	measure 'Header Context' =
+			VAR _fy            = [Selected FY]
+			VAR _to            = [As-of Period]
+			VAR _mode          = [Period Mode]
+			VAR _month         =
+			    CALCULATE (
+			        SELECTEDVALUE ( DimDate[month_name] )
+			        ,REMOVEFILTERS ( DimDate )
+			        ,DimDate[fiscal_year] = _fy
+			        ,DimDate[fiscal_period] = _to
+			    )
+			VAR _window        =
+			    SWITCH (
+			        _mode
+			        ,"Month"
+			            ,_month
+			        ,_mode & " through " & _month
+			    )
+			VAR _result        = "P&L  |  FY" & _fy & "  |  " & _window
+			RETURN
+			    _result
+		displayFolder: Selection
+
+	/// Actual value of the current pnl_layout row in the current filter context. Total rows show only at statement level, never under an account group.
+	measure 'PnL Row' =
+			VAR _key           = SELECTEDVALUE ( pnl_layout[row_key] )
+			VAR _is_total      = SELECTEDVALUE ( pnl_layout[is_total] )
+			VAR _result        =
+			    SWITCH (
+			        TRUE ()
+			        ,ISBLANK ( _key )
+			            ,BLANK ()
+			        ,_is_total && ISINSCOPE ( DimAccount[stmt_group] )
+			            ,BLANK ()
+			        ,_key = "GP"
+			            ,[Gross Profit]
+			        ,_key = "EBITDA"
+			            ,[EBITDA]
+			        ,_key = "NI"
+			            ,[Net Income]
+			        ,CALCULATE (
+			            [Amount]
+			            ,DimAccount[stmt_section] = _key
+			        )
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix\Rows
+
+	/// Budget value of the current pnl_layout row.
+	measure 'PnL Row Budget' =
+			VAR _key           = SELECTEDVALUE ( pnl_layout[row_key] )
+			VAR _is_total      = SELECTEDVALUE ( pnl_layout[is_total] )
+			VAR _result        =
+			    SWITCH (
+			        TRUE ()
+			        ,ISBLANK ( _key )
+			            ,BLANK ()
+			        ,_is_total && ISINSCOPE ( DimAccount[stmt_group] )
+			            ,BLANK ()
+			        ,_key = "GP"
+			            ,[Gross Profit Budget]
+			        ,_key = "EBITDA"
+			            ,[EBITDA Budget]
+			        ,_key = "NI"
+			            ,[Net Income Budget]
+			        ,CALCULATE (
+			            [Budget]
+			            ,DimAccount[stmt_section] = _key
+			        )
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix\Rows
+
+	/// Row actual over the selected window: fiscal periods [Period Start]..[As-of Period] of [Selected FY].
+	measure 'PnL Actual' =
+			VAR _fy            = [Selected FY]
+			VAR _from          = [Period Start]
+			VAR _to            = [As-of Period]
+			VAR _result        =
+			    CALCULATE (
+			        [PnL Row]
+			        ,REMOVEFILTERS ( DimDate )
+			        ,DimDate[fiscal_year] = _fy
+			        ,DimDate[fiscal_period] >= _from
+			        ,DimDate[fiscal_period] <= _to
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix
+
+	/// Same window, previous fiscal year.
+	measure 'PnL PY' =
+			VAR _fy            = [Selected FY]
+			VAR _from          = [Period Start]
+			VAR _to            = [As-of Period]
+			VAR _result        =
+			    CALCULATE (
+			        [PnL Row]
+			        ,REMOVEFILTERS ( DimDate )
+			        ,DimDate[fiscal_year] = _fy - 1
+			        ,DimDate[fiscal_period] >= _from
+			        ,DimDate[fiscal_period] <= _to
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix
+
+	/// Row budget over the selected window.
+	measure 'PnL Budget' =
+			VAR _fy            = [Selected FY]
+			VAR _from          = [Period Start]
+			VAR _to            = [As-of Period]
+			VAR _result        =
+			    CALCULATE (
+			        [PnL Row Budget]
+			        ,REMOVEFILTERS ( DimDate )
+			        ,DimDate[fiscal_year] = _fy
+			        ,DimDate[fiscal_period] >= _from
+			        ,DimDate[fiscal_period] <= _to
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix
+
+	measure 'PnL Δ PY' = [PnL Actual] - [PnL PY]
+		formatString: +\$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix
+
+	measure 'PnL Δ PY %' = DIVIDE ( [PnL Δ PY], ABS ( [PnL PY] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Matrix
+
+	measure 'PnL Δ Budget' = [PnL Actual] - [PnL Budget]
+		formatString: +\$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix
+
+	measure 'PnL Δ Budget %' = DIVIDE ( [PnL Δ Budget], ABS ( [PnL Budget] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Matrix
+
+	/// PY or Budget for the row, per the Comparison slicer.
+	measure 'PnL Cmp' =
+			VAR _mode          = [Comparison Mode]
+			VAR _result        =
+			    IF (
+			        _mode = "Budget"
+			        ,[PnL Budget]
+			        ,[PnL PY]
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix
+
+	measure 'PnL Δ Cmp' = [PnL Actual] - [PnL Cmp]
+		formatString: +\$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Matrix
+
+	/// Font colour for Δ PY: green good / red bad; expense rows inverted (cost up = red).
+	measure 'PnL Δ PY Color' =
+			VAR _delta         = [PnL Δ PY]
+			VAR _ref           = [PnL PY]
+			VAR _is_expense    = SELECTEDVALUE ( pnl_layout[is_expense] )
+			VAR _good          = IF ( _is_expense, -_delta, _delta )
+			VAR _result        =
+			    SWITCH (
+			        TRUE ()
+			        ,ISBLANK ( _ref ) || ISBLANK ( _delta )
+			            ,"#9AA4AF"
+			        ,_good > 0
+			            ,"#188038"
+			        ,_good < 0
+			            ,"#C5221F"
+			        ,"#1F2733"
+			    )
+			RETURN
+			    _result
+		displayFolder: Matrix\Formatting
+
+	/// Font colour for Δ Budget: green good / red bad; expense rows inverted (over budget = red).
+	measure 'PnL Δ Budget Color' =
+			VAR _delta         = [PnL Δ Budget]
+			VAR _ref           = [PnL Budget]
+			VAR _is_expense    = SELECTEDVALUE ( pnl_layout[is_expense] )
+			VAR _good          = IF ( _is_expense, -_delta, _delta )
+			VAR _result        =
+			    SWITCH (
+			        TRUE ()
+			        ,ISBLANK ( _ref ) || ISBLANK ( _delta )
+			            ,"#9AA4AF"
+			        ,_good > 0
+			            ,"#188038"
+			        ,_good < 0
+			            ,"#C5221F"
+			        ,"#1F2733"
+			    )
+			RETURN
+			    _result
+		displayFolder: Matrix\Formatting
+
+	/// Colour for the KPI delta vs the selected comparison; expense rows inverted.
+	measure 'PnL Δ Cmp Color' =
+			VAR _delta         = [PnL Δ Cmp]
+			VAR _ref           = [PnL Cmp]
+			VAR _is_expense    = SELECTEDVALUE ( pnl_layout[is_expense] )
+			VAR _good          = IF ( _is_expense, -_delta, _delta )
+			VAR _result        =
+			    SWITCH (
+			        TRUE ()
+			        ,ISBLANK ( _ref ) || ISBLANK ( _delta )
+			            ,"#9AA4AF"
+			        ,_good > 0
+			            ,"#188038"
+			        ,_good < 0
+			            ,"#C5221F"
+			        ,"#1F2733"
+			    )
+			RETURN
+			    _result
+		displayFolder: Matrix\Formatting
+
+	/// KPI subtitle text: arrow, delta in $K and % vs the selected comparison.
+	measure 'PnL Δ Label' =
+			VAR _cmp           = [PnL Cmp]
+			VAR _delta         = [PnL Δ Cmp]
+			VAR _mode          = [Comparison Mode]
+			VAR _pct           = DIVIDE ( _delta, ABS ( _cmp ) )
+			VAR _arrow         = IF ( _delta >= 0, UNICHAR ( 9650 ), UNICHAR ( 9660 ) )
+			VAR _result        =
+			    IF (
+			        ISBLANK ( _cmp )
+			        ,"No " & _mode & " data"
+			        ,_arrow & " " & FORMAT ( _delta / 1000, "+$#,0.0;-$#,0.0" ) & "K  "
+			            & FORMAT ( _pct, "+0.0%;-0.0%" ) & " vs " & _mode
+			    )
+			RETURN
+			    _result
+		displayFolder: Matrix\Formatting
+
+	measure 'Revenue (Period)' =
+			CALCULATE (
+			    [PnL Actual]
+			    ,pnl_layout[row_key] = "Revenue"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: KPI
+
+	measure 'COGS (Period)' =
+			CALCULATE (
+			    [PnL Actual]
+			    ,pnl_layout[row_key] = "COGS"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: KPI
+
+	measure 'Gross Profit (Period)' =
+			CALCULATE (
+			    [PnL Actual]
+			    ,pnl_layout[row_key] = "GP"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: KPI
+
+	measure 'OpEx (Period)' =
+			CALCULATE (
+			    [PnL Actual]
+			    ,pnl_layout[row_key] = "OpEx"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: KPI
+
+	measure 'EBITDA (Period)' =
+			CALCULATE (
+			    [PnL Actual]
+			    ,pnl_layout[row_key] = "EBITDA"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: KPI
+
+	measure 'Net Income (Period)' =
+			CALCULATE (
+			    [PnL Actual]
+			    ,pnl_layout[row_key] = "NI"
+			)
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: KPI
+
+	/// Other income - other expense - tax over the window (= Net Income - EBITDA).
+	measure 'Other Net (Period)' = [Net Income (Period)] - [EBITDA (Period)]
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: KPI
+
+	measure 'GP % (Period)' = DIVIDE ( [Gross Profit (Period)], [Revenue (Period)] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: KPI
+
+	measure 'NI % (Period)' = DIVIDE ( [Net Income (Period)], [Revenue (Period)] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: KPI
+
+	measure 'Revenue Δ Label' =
+			CALCULATE (
+			    [PnL Δ Label]
+			    ,pnl_layout[row_key] = "Revenue"
+			)
+		displayFolder: KPI\Labels
+
+	measure 'Gross Profit Δ Label' =
+			VAR _delta         =
+			    CALCULATE (
+			        [PnL Δ Label]
+			        ,pnl_layout[row_key] = "GP"
+			    )
+			VAR _result        = _delta & "  |  GP% " & FORMAT ( [GP % (Period)], "0.0%" )
+			RETURN
+			    _result
+		displayFolder: KPI\Labels
+
+	measure 'OpEx Δ Label' =
+			CALCULATE (
+			    [PnL Δ Label]
+			    ,pnl_layout[row_key] = "OpEx"
+			)
+		displayFolder: KPI\Labels
+
+	measure 'Net Income Δ Label' =
+			VAR _delta         =
+			    CALCULATE (
+			        [PnL Δ Label]
+			        ,pnl_layout[row_key] = "NI"
+			    )
+			VAR _result        = _delta & "  |  NI% " & FORMAT ( [NI % (Period)], "0.0%" )
+			RETURN
+			    _result
+		displayFolder: KPI\Labels
+
+	measure 'Revenue Δ Color' =
+			CALCULATE (
+			    [PnL Δ Cmp Color]
+			    ,pnl_layout[row_key] = "Revenue"
+			)
+		displayFolder: KPI\Labels
+
+	measure 'Gross Profit Δ Color' =
+			CALCULATE (
+			    [PnL Δ Cmp Color]
+			    ,pnl_layout[row_key] = "GP"
+			)
+		displayFolder: KPI\Labels
+
+	measure 'OpEx Δ Color' =
+			CALCULATE (
+			    [PnL Δ Cmp Color]
+			    ,pnl_layout[row_key] = "OpEx"
+			)
+		displayFolder: KPI\Labels
+
+	measure 'Net Income Δ Color' =
+			CALCULATE (
+			    [PnL Δ Cmp Color]
+			    ,pnl_layout[row_key] = "NI"
+			)
+		displayFolder: KPI\Labels
+
+	/// Net income bridge over the selected window: Revenue, -COGS, -OpEx, +/-Other; total = Net Income.
+	measure 'Waterfall Value' =
+			VAR _step          = SELECTEDVALUE ( WaterfallStep[step_key] )
+			VAR _result        =
+			    SWITCH (
+			        _step
+			        ,"Revenue"
+			            ,[Revenue (Period)]
+			        ,"COGS"
+			            ,-[COGS (Period)]
+			        ,"OpEx"
+			            ,-[OpEx (Period)]
+			        ,"Other"
+			            ,[Other Net (Period)]
+			        ,[Net Income (Period)]
+			    )
+			RETURN
+			    _result
+		formatString: +\$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Charts
+
+	/// Net Income per month of the selected fiscal year (ignores Period / Month selection).
+	measure 'NI Month' =
+			VAR _fy            = [Selected FY]
+			VAR _result        =
+			    CALCULATE (
+			        [Net Income]
+			        ,DimDate[fiscal_year] = _fy
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Charts
+
+	/// Net Income in the same fiscal month of the previous fiscal year.
+	measure 'NI Month PY' =
+			VAR _fy            = [Selected FY]
+			VAR _result        =
+			    CALCULATE (
+			        [Net Income]
+			        ,DimDate[fiscal_year] = _fy - 1
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Charts
+
+	/// Budgeted Net Income per month of the selected fiscal year.
+	measure 'NI Month Budget' =
+			VAR _fy            = [Selected FY]
+			VAR _result        =
+			    CALCULATE (
+			        [Net Income Budget]
+			        ,DimDate[fiscal_year] = _fy
+			    )
+			RETURN
+			    _result
+		formatString: \$#,0.0,\K;-\$#,0.0,\K;\$0.0\K
+		displayFolder: Charts
+
+	column Dummy
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: [Dummy]
+
+	partition _Measures = calculated
+		mode: import
+		source =
+				ROW ( "Dummy", "" )

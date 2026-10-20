@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "QBO PnL"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "8d8cc1e6-964c-4013-aa8f-39cd2020e0bc"
+  }
+}
